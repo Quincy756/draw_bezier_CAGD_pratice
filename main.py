@@ -2,65 +2,94 @@
 # 使用 matplotlib中的FigureCanvas (在使用 Qt5 Backends中 FigureCanvas继承自QtWidgets.QWidget)
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from PyQt5 import QtCore, QtWidgets, QtGui
-from PyQt5.QtWidgets import QDialog, QPushButton, QVBoxLayout, QMainWindow
+from PyQt5.QtWidgets import *
 import matplotlib.pyplot as plt
 import numpy as np
 import sys
 from GUI.mainWindow import Ui_MainWindow
+from drawCurves.DrawCurves import *
+
+
+class MyWindow(QMainWindow):
+    def __init__(self):
+        super(QMainWindow, self).__init__()
+
+class CanvasWidget(QWidget):
+    def __init__(self):
+        super(QWidget, self).__init__()
+
+    def contextMenuEvent(self, event) -> None:
+        self.menu = QMenu()
+        self.editPos = QAction("编辑坐标")
+        self.newFigure = QAction("新建")
+        self.cancel = QAction("取消")
+        self.menu.addAction(self.editPos)
+        self.menu.addAction(self.newFigure)
+        self.menu.addAction(self.cancel)
+        self.menu.exec_(event.globalPos())
 
 
 class Ui_MyWindow(Ui_MainWindow):
-    def __init__(self, mainWindow):
+    def __init__(self, mainWindow, canvas):
         self.window = mainWindow
+        self.canvas = canvas
         self.setupUi(self.window)
 
-    def setupUi(self, MainWindow):
-        super(Ui_MyWindow, self).setupUi(MainWindow)
+    def setupUi(self, Window):
+        super(Ui_MyWindow, self).setupUi(Window)
+        self.horizontalLayout = QHBoxLayout()
+        self.centralwidget.setLayout(self.horizontalLayout)
+        self.tabWidget = QTabWidget()
+        self.horizontalLayout.addWidget(self.tabWidget)
+
+        self.window.setMouseTracking(True)
+        self.centralwidget.setMouseTracking(True)
+
+        self.tabWidget.setMouseTracking(True)
+        self.canvasWidget = CanvasWidget()
+        self.canvasLayout = QHBoxLayout()
+        self.canvasLayout.addWidget(self.canvas)
+        self.canvasWidget.setLayout(self.canvasLayout)
+        self.tabWidget.addTab(self.canvasWidget, "1")
+
+        self.canvasWidget.setMouseTracking(True)
+
+        self.draw()
         # 几个QWidgets
-        self.figure = plt.figure(facecolor='#FFD7C4')  # 可选参数,facecolor为背景颜色
-        self.canvas = FigureCanvas(self.figure)
-        self.button_draw = QPushButton("绘图")
+        # self.button_draw = QPushButton("绘图")
         # 连接事件
-        self.button_draw.clicked.connect(self.Draw)
+        # self.button_draw.clicked.connect(self.draw)
+        # self.horizontalLayout.addWidget(self.button_draw)
 
+
+    def getFunc(self, func, *args, **kwargs):
+        self.myFunc = func
+        self.dictArgs = kwargs
+        self.tupleArgs = args
+
+    def setCanvas(self):
+        self.canvas.mpl_connect("motion_notify_event", self.changeMessage)  # 支持鼠标移动
+
+    def draw(self):
+        self.setCanvas()
         # 设置布局
-        layout = QVBoxLayout()
-        layout.addWidget(self.canvas)
-        layout.addWidget(self.button_draw)
-        self.horizontalLayout.addLayout(layout)
-
-    def Draw(self):
-        AgeList = ['10', '21', '12', '14', '25']
-        NameList = ['Tom', 'Jon', 'Alice', 'Mike', 'Mary']
-
-        # 将AgeList中的数据转化为int类型
-        AgeList = list(map(int, AgeList))
-
-        # 将x,y轴转化为矩阵式
-        self.x = np.arange(len(NameList)) + 1
-        self.y = np.array(AgeList)
-
-        # tick_label后边跟x轴上的值，（可选选项：color后面跟柱型的颜色，width后边跟柱体的宽度）
-        plt.bar(range(len(NameList)), AgeList, tick_label=NameList, color='green', width=0.5)
-
-        # 在柱体上显示数据
-        for a, b in zip(self.x, self.y):
-            plt.text(a - 1, b, '%d' % b, ha='center', va='bottom')
-
-        # 设置标题
-        plt.title("Demo")
-
-        # 画图
         self.canvas.draw()
-        # 保存画出来的图片
-        plt.savefig('1.jpg')
+
+    # 改变状态栏信息
+    def changeMessage(self, event):
+        message = str(event.x-21) + "," + str(event.y-21)
+        self.statusbar.showMessage(message)
+
+
 
 
 # 运行程序
 if __name__ == '__main__':
     app = QtWidgets.QApplication(sys.argv)
-    main_window = QMainWindow()
-    ui_window = Ui_MyWindow(main_window)
+    main_window = MyWindow()
+    draw_lines = DrawLines()
+    canvas = draw_lines.getCanvas()
+    ui_window = Ui_MyWindow(main_window, canvas)
     main_window.show()
     app.exec()
 

@@ -8,6 +8,7 @@ pyqt5 = "*"
 numpy = "*"
 pyqt5-tools = "*"
 matplotlib = "*"
+scipy = "*"
 
 [dev-packages]
 
