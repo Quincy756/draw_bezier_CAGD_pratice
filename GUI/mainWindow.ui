@@ -65,7 +65,7 @@
    <property name="minimumSize">
     <size>
      <width>320</width>
-     <height>0</height>
+     <height>41</height>
     </size>
    </property>
    <attribute name="dockWidgetArea">
@@ -258,7 +258,7 @@
   </action>
   <action name="action_2">
    <property name="text">
-    <string>另存为</string>
+    <string>导入</string>
    </property>
   </action>
   <action name="action_3">

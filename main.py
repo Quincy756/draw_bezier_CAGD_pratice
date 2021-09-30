@@ -83,10 +83,35 @@ class Ui_MyWindow(Ui_MainWindow):
         self.statusbar.showMessage(message)
 
     def activateMenu(self):
-        data = processData()
-        print("yes")
-        self.action.triggered.connect(lambda: data.saveData())
-        self.action_2.triggered.connect(lambda: data.importData())
+        process_data = processData()
+        self.action.triggered.connect(lambda: process_data.saveData())
+        self.action_2.triggered.connect(lambda: process_data.exportData())
+        process_data.getUpdateFunc(self.updateTable)
+
+    def updateTable(self, data=[]):
+        print(data)
+        rows, cols = len(data[0]), len(data)
+        self.tableWidget.setRowCount(rows)
+        self.tableWidget.setColumnCount(rows)
+        for row in range(rows):
+            for col in range(cols):
+                item = QTableWidgetItem()
+                item.setText(str(data[col][row]))
+                self.tableWidget.setItem(row, col, item)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

@@ -9,6 +9,7 @@ numpy = "*"
 pyqt5-tools = "*"
 matplotlib = "*"
 scipy = "*"
+openpyxl = "*"
 
 [dev-packages]
 
