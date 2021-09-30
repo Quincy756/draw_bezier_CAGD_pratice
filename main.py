@@ -32,13 +32,17 @@ class CanvasWidget(QWidget):
 
 
 class Ui_MyWindow(Ui_MainWindow):
-    def __init__(self, mainWindow, canvas):
+    def __init__(self, mainWindow):
+
+        self.draw_lines = DrawLines()
+        self.canvas = self.draw_lines.getCanvas()
+
         self.window = mainWindow
-        self.canvas = canvas
         self.setupUi(self.window)
 
     def setupUi(self, Window):
         super(Ui_MyWindow, self).setupUi(Window)
+        self.data = None
         self.activateMenu()
         self.main_tabWidget = QTabWidget()
         self.horizontalLayout.addWidget(self.main_tabWidget)
@@ -79,17 +83,26 @@ class Ui_MyWindow(Ui_MainWindow):
     # 改变状态栏信息
     def changeMessage(self, event):
         # message = str(event.x-21) + "," + str(event.y-21)
-        message = str(event.xdata) + "," + str(event.ydata)
+        x, y = event.xdata, event.ydata
+        message = str(x) + "," + str(y)
         self.statusbar.showMessage(message)
 
-    def activateMenu(self):
-        process_data = processData()
-        self.action.triggered.connect(lambda: process_data.saveData())
-        self.action_2.triggered.connect(lambda: process_data.exportData())
-        process_data.getUpdateFunc(self.updateTable)
 
-    def updateTable(self, data=[]):
-        print(data)
+
+
+
+
+
+
+
+    def activateMenu(self):
+        self.process_data = processData(self.data)
+        self.action.triggered.connect(lambda: self.process_data.saveData())
+        self.action_2.triggered.connect(lambda: self.process_data.exportData())
+        self.process_data.getUpdateFunc([self.exportDataToTable, self.getTableData])
+        self.setFig()
+
+    def exportDataToTable(self, data=[]):
         rows, cols = len(data[0]), len(data)
         self.tableWidget.setRowCount(rows)
         self.tableWidget.setColumnCount(rows)
@@ -99,43 +112,31 @@ class Ui_MyWindow(Ui_MainWindow):
                 item.setText(str(data[col][row]))
                 self.tableWidget.setItem(row, col, item)
 
+    def getTableData(self):
+        data = []
+        rows, cols = self.tableWidget.rowCount(), self.tableWidget.columnCount()
+        print(rows, cols)
+        for col in range(cols):
+            temp = []
+            for row in range(rows):
+                data = self.tableWidget.item(row, col).text()
+                print(data)
+                if data:
+                    temp.append(int(data))
+            data.append(temp)
+        print(data)
+        self.data = data
+        self.process_data.setData(self.data)
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    def setFig(self):
+        self.process_data.setFig(self.draw_lines.getFigure())
 
 
 # 运行程序
 if __name__ == '__main__':
     app = QtWidgets.QApplication(sys.argv)
     main_window = MyWindow()
-    draw_lines = DrawLines()
-    canvas = draw_lines.getCanvas()
-    ui_window = Ui_MyWindow(main_window, canvas)
+    ui_window = Ui_MyWindow(main_window)
     main_window.show()
     app.exec()
 

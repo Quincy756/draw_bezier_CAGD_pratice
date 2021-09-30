@@ -68,14 +68,10 @@ class DrawLines:
         # figure的百分比,从figure 10%的位置开始绘制, 宽高是figure的80%
         left, bottom, width, height = 0.05, 0.05, 0.94, 0.94
         # 获得绘制的句柄
-        ax1 = self.figure.add_axes([left, bottom, width, height])
-        ax1.plot(self.x, self.y, 'r-o' )
-        ax1.set_title('area1')
-        ax1.plot(self.bezier_x, self.bezier_y, 'b')
-
-    def saveFigure(self, figure):
-        # 保存画出来的图片
-        plt.savefig('1.jpg')
+        self.ax1 = self.figure.add_axes([left, bottom, width, height])
+        self.ax1.plot(self.x, self.y, 'r-o' )
+        self.ax1.set_title('area1')
+        self.ax1.plot(self.bezier_x, self.bezier_y, 'b')
 
     def bezierFunc(self):
         t_array = np.arange(0, 1.0001, 0.0001)
@@ -96,6 +92,13 @@ class DrawLines:
             b_xList.append(x_temp)
             b_yList.append(y_temp)
         return b_xList, b_yList
+
+
+
+
+
+            except Exception as ex:
+                print(ex)
 
 
 

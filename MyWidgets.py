@@ -19,3 +19,24 @@ class MyFileMenu(QMenu):
         data = processData(data)
         self.saveAction.triggered.connect(data.saveData)
         self.importAction.triggered.connect(data.importData)
+
+
+class SetFileDialog:
+
+    def __init__(self):
+        pass
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

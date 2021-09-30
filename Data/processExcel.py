@@ -1,3 +1,4 @@
+import matplotlib.pyplot as plt
 from PyQt5.QtWidgets import  *
 import openpyxl
 import os
@@ -42,7 +43,7 @@ class ExcelHandle:
         self.currentSheet.cell(1, 2).value = "y"
         columns = len(self.data)
         rows = len(self.data[0]) + 1
-
+        print("data")
         for row in range(2, rows+1):
             for col in range(1, columns+1):
                 self.currentSheet.cell(row, col).value = self.data[col-1][row-2]
@@ -71,8 +72,8 @@ class ExcelHandle:
 
 class processData:
     def __init__(self, data=None):
-        # self.data = data
-        self.data = [[1, 2, 3], [4, 6, 8]]
+        self.data = data
+        # self.data = [[1, 2, 3], [4, 6, 8]]
         self.excel = ExcelHandle(self.data)
 
     def saveData(self):
@@ -81,9 +82,28 @@ class processData:
         self.saveDataPath = "Data/"
         filedialog = QFileDialog()
         filedialog.setFileMode(QFileDialog.Directory)
-        file_path, file_name = QFileDialog.getSaveFileName(filedialog, "保存", self.saveDataPath, "*.xlsx")
+        file_path, file_name = QFileDialog.getSaveFileName(filedialog, "保存", self.saveDataPath,\
+                             "Excel Files (*.xlsx);;Figure Files(*.fig);;PNG Files(*.png);;JPEG(*.jpg)")
         if file_path:
-            self.excel.saveData(file_path)
+            if file_name == "Excel Files (*.xlsx)":
+                # 调用main.py 中的获取表格数据点函数
+                self.updateFunc[1]()
+                print(self.data)
+                self.excel.saveData(file_path)
+
+            elif file_name == "Figure Files(*.fig)":
+                print("yes")
+
+            elif file_name == "JPEG(*.jpg)" or "PNG Files(*.png)":
+                self.saveFig(file_path)
+
+    def setFig(self, figure):
+        self.figure = figure
+
+    def saveFig(self, file_path):
+        plt.savefig(file_path)
+        plt.close()
+
 
     def setData(self, data):
         self.data = data
@@ -100,10 +120,16 @@ class processData:
         self.exportPath = "Data/"
         filedialog = QFileDialog()
         filedialog.setFileMode(QFileDialog.ExistingFiles)
-        file_path, file_name = QFileDialog.getOpenFileName(filedialog, "导入", self.exportPath, "*.xlsx")
+        file_path, file_name = QFileDialog.getOpenFileName(filedialog, "导入", self.exportPath, \
+                                        "Excel Files (*.xlsx);;Figure Files(*.fig)")
+
         if file_path:
-            self.data = self.excel.exportData(file_path, "Sheet")
-        self.updateFunc(self.data)
+            if file_name == "Excel Files (*.xlsx)":
+                self.data = self.excel.exportData(file_path, "Sheet")
+                self.updateFunc[0](self.data)
+
+            elif file_name == "Figure Files(*.fig)":
+                print("yes")
 
 
 
