@@ -65,7 +65,7 @@ class DrawLines:
 
         # 新建区域ax1
         # figure的百分比,从figure 10%的位置开始绘制, 宽高是figure的80%
-        left, bottom, width, height = 0.02, 0.03, 0.94, 0.94
+        left, bottom, width, height = 0.05, 0.05, 0.94, 0.94
         # 获得绘制的句柄
         ax1 = self.figure.add_axes([left, bottom, width, height])
         ax1.plot(self.x, self.y, 'r-o' )

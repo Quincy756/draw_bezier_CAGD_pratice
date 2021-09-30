@@ -37,20 +37,18 @@ class Ui_MyWindow(Ui_MainWindow):
 
     def setupUi(self, Window):
         super(Ui_MyWindow, self).setupUi(Window)
-        self.horizontalLayout = QHBoxLayout()
-        self.centralwidget.setLayout(self.horizontalLayout)
-        self.tabWidget = QTabWidget()
-        self.horizontalLayout.addWidget(self.tabWidget)
+        self.main_tabWidget = QTabWidget()
+        self.horizontalLayout.addWidget(self.main_tabWidget)
 
         self.window.setMouseTracking(True)
         self.centralwidget.setMouseTracking(True)
 
-        self.tabWidget.setMouseTracking(True)
+        self.main_tabWidget.setMouseTracking(True)
         self.canvasWidget = CanvasWidget()
         self.canvasLayout = QHBoxLayout()
         self.canvasLayout.addWidget(self.canvas)
         self.canvasWidget.setLayout(self.canvasLayout)
-        self.tabWidget.addTab(self.canvasWidget, "1")
+        self.main_tabWidget.addTab(self.canvasWidget, "1")
 
         self.canvasWidget.setMouseTracking(True)
 
@@ -77,8 +75,10 @@ class Ui_MyWindow(Ui_MainWindow):
 
     # 改变状态栏信息
     def changeMessage(self, event):
-        message = str(event.x-21) + "," + str(event.y-21)
+        # message = str(event.x-21) + "," + str(event.y-21)
+        message = str(event.xdata) + "," + str(event.ydata)
         self.statusbar.showMessage(message)
+
 
 
 
