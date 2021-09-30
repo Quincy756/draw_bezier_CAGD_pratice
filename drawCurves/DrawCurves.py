@@ -56,7 +56,8 @@ class DrawLines:
     def getFigure(self):
         return self.figure
 
-    def draw(self):
+    def draw(self, data=[None]*2):
+        self.x, self.y = data[0], data[1]
         # 线性插值
         self.x = [1, 2, 6, 20, 30]
         self.y = [2, 20, 32, 35, 40]
@@ -71,12 +72,6 @@ class DrawLines:
         ax1.plot(self.x, self.y, 'r-o' )
         ax1.set_title('area1')
         ax1.plot(self.bezier_x, self.bezier_y, 'b')
-
-
-
-
-
-
 
     def saveFigure(self, figure):
         # 保存画出来的图片

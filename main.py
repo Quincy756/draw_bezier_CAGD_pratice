@@ -8,6 +8,8 @@ import numpy as np
 import sys
 from GUI.mainWindow import Ui_MainWindow
 from drawCurves.DrawCurves import *
+from Data.processExcel import *
+
 
 
 class MyWindow(QMainWindow):
@@ -37,6 +39,7 @@ class Ui_MyWindow(Ui_MainWindow):
 
     def setupUi(self, Window):
         super(Ui_MyWindow, self).setupUi(Window)
+        self.activateMenu()
         self.main_tabWidget = QTabWidget()
         self.horizontalLayout.addWidget(self.main_tabWidget)
 
@@ -78,6 +81,24 @@ class Ui_MyWindow(Ui_MainWindow):
         # message = str(event.x-21) + "," + str(event.y-21)
         message = str(event.xdata) + "," + str(event.ydata)
         self.statusbar.showMessage(message)
+
+    def activateMenu(self):
+        data = processData()
+        print("yes")
+        self.action.triggered.connect(lambda: data.saveData())
+        self.action_2.triggered.connect(lambda: data.importData())
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
