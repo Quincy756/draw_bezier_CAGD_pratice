@@ -1,0 +1,17 @@
+<RCC>
+    <qresource prefix="/">
+        <file>resources//MyIcon//folder-fill.svg</file>
+        <file>resources//MyIcon//file.svg</file>
+        <file>resources//MyIcon//Directory tree.svg</file>
+        <file>resources//MyIcon//search.svg</file>
+        <file>resources//MyIcon//download.svg</file>
+        <file>resources//MyIcon//collection.svg</file>
+        <file>resources//MyIcon//plus-circle-fill.svg</file>
+        <file>resources//MyIcon//angle-up.svg</file>
+        <file>resources//MyIcon//angle-down.svg</file>
+        <file>resources//MyIcon//nail.svg</file>
+        <file>resources//MyIcon//check.svg</file>
+        <file>resources//MyIcon//times.svg</file>
+
+    </qresource>
+</RCC>

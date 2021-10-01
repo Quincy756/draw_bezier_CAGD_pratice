@@ -12,6 +12,14 @@ from Data.processExcel import *
 from PyQt5.QtCore import Qt
 import math
 import time
+import src
+
+def getIcon(path):
+    file_pixmap = QPixmap(path)
+    file_fit_pixmap = file_pixmap.scaled(16, 16, Qt.IgnoreAspectRatio, Qt.SmoothTransformation)
+    # 注意 scaled() 返回一个 QPixmap
+    return QIcon(file_fit_pixmap)
+
 
 
 class MyWindow(QMainWindow):
@@ -33,8 +41,12 @@ class CanvasWidget(QWidget):
 class InputPointWdt(QWidget):
     def __init__(self):
         super(QWidget, self).__init__()
-
-        self.resize(200, 40)
+        self.resize(160, 20)
+        # 设置窗口为模态
+        self.setWindowModality(Qt.ApplicationModal)
+        # 设置窗口透明度
+        self.setWindowOpacity(0.8)
+        self.setWindowFlags(Qt.ToolTip)
 
         self.layout = QHBoxLayout()
         self.setLayout(self.layout)
@@ -42,16 +54,52 @@ class InputPointWdt(QWidget):
         self.xLineEdit = QLineEdit()
         self.layout.addWidget(self.xLineEdit)
         # 添加分割线
-        self.splitter = QSplitter(Qt.Vertical)
+        self.splitter = QLabel("|")
         self.layout.addWidget(self.splitter)
         self.yLineEdit = QLineEdit()
         self.layout.addWidget(self.yLineEdit)
+        self.splitter.setMaximumWidth(5)
+        self.xLineEdit.setMaximumHeight(25)
+        self.yLineEdit.setMaximumHeight(25)
+
+
+        self.okBtn = QPushButton()
+        self.cancelBtn = QPushButton()
+        self.okBtn.setMaximumWidth(20)
+        self.cancelBtn.setMaximumWidth(20)
+
+        self.okBtn.setFlat(True)
+        self.cancelBtn.setFlat(True)
+        self.okBtn.setIcon(getIcon(":/resources//MyIcon//check.svg"))
+        self.cancelBtn.setIcon(getIcon(":/resources//MyIcon//times.svg"))
+
+        self.layout.addWidget(self.okBtn)
+        self.layout.addWidget(self.cancelBtn)
+        self.cancelBtn.clicked.connect(lambda: self.close())
 
     def setLineEditText(self, x, y):
         self.xLineEdit.setText(str(x))
-        self.xLineEdit.selectAll()
         self.yLineEdit.setText(str(y))
+        self.xLineEdit.selectAll()
         self.yLineEdit.selectAll()
+
+    def setCloseFunc(self, func):
+        self.closeFunc = func
+
+    def getData(self):
+        res = [None]*2
+        try:
+            res[0], res[1] = float(self.xLineEdit.text()), float(self.yLineEdit.text())
+            return res
+        except Exception as ex:
+            print(ex)
+            warning_box = QMessageBox(QMessageBox.Warning, "警告","输入非小数")
+            warning_box.exec_()
+
+
+    def closeEvent(self, a0: QCloseEvent) -> None:
+        self.closeFunc()
+
 
 
 class Ui_MyWindow(Ui_MainWindow):
@@ -122,16 +170,25 @@ class Ui_MyWindow(Ui_MainWindow):
 
     # 双击时创建可以输入位置坐标的，此处x, y 是相对于窗口坐标，不是具体坐标轴中的坐标
     def showPosInput(self):
-        if not self.showPosFlag and self.selectedFlag:
-            texts = [str(self.selectedPoint[0]), str(self.selectedPoint[1])]
+        if not self.showPosFlag:
+            flag = False
+            if self.selectedFlag:
+                texts = [str(self.selectedPoint[0]), str(self.selectedPoint[1])]
+                flag = True
+            else:
+                texts = [round(self.pos_x, 3), round(self.pos_y, 3)]
+                flag = False
             x, y = (QCursor.pos().x(), QCursor.pos().y())
             self.posWidget = InputPointWdt()
-            self.posWidget.move(x, y)
+            self.posWidget.move(x-120, y-20)
             self.posWidget.setLineEditText(*texts)
             self.posWidget.show()
             self.showPosFlag = True
+            self.dragPicFlag = False
+            self.posWidget.setCloseFunc(self.closePosInput)
+            self.posWidget.okBtn.clicked.connect(lambda: self.updatePointPos(flag))
 
-    # 改变状态栏信息
+    # 移动鼠标时改变状态栏信息，拖拽曲线
     def changeMessage(self, event):
         # message = str(event.x-21) + "," + str(event.y-21)
         s = time.time()
@@ -148,30 +205,27 @@ class Ui_MyWindow(Ui_MainWindow):
                     if self.getPointDistance((x, y), (self.pos_x, self.pos_y)) < 0.5:
                         # 选中
                         self.selectedFlag = True
+                        # print(self.selectedFlag)
                         message = str(x) + "," + str(y)
                         self.main_tabWidget.setCursor(Qt.CrossCursor)
 
                         self.selectedPoint = (x, y)
+                        self.currentIndex = index
                         # self.showPosInput()
 
                         if self.keyPressFlag:
                             self.dragPicFlag = True
-                            self.currentIndex = index
-                            # 替换该点, 取点的三位小数显示到表格中
-                            # self.x[self.currentIndex], self.y[self.currentIndex] = round(self.pos_x, 3), round(y_select, 3)
-                            # self.draw_lines.draw(self.x, self.y)
-                            # self.dragPicFlag = False
                         else:
                             self.dragPicFlag = False
                         break
                     else:
                         # 未选中点时
                         self.selectedFlag = False
-                        self.closePosInput()
+                        # self.closePosInput()
 
                         if self.dragPicFlag: self.main_tabWidget.setCursor(Qt.CrossCursor)
                         else: self.main_tabWidget.setCursor(Qt.ArrowCursor)
-                        message = str(self.pos_x) + "," + str(self.pos_y)
+                        message = str(round(self.pos_x, 3)) + "," + str(round(self.pos_y, 3))
                     index += 1
                 self.statusbar.showMessage(message)
             except Exception as ex:
@@ -182,20 +236,22 @@ class Ui_MyWindow(Ui_MainWindow):
     def showContextMenu(self, pos):
         self.menu = QMenu()
         self.editPos = QAction("编辑坐标")
-        self.newFigure = QAction("新建")
+        self.newPoint = QAction("新建")
         self.cancel = QAction("取消")
+        self.delete = QAction("删除")
         self.menu.addAction(self.editPos)
-        self.menu.addAction(self.newFigure)
+        self.menu.addAction(self.newPoint)
+        self.menu.addAction(self.delete)
+        self.menu.addSeparator()
         self.menu.addAction(self.cancel)
         self.editPos.triggered.connect(self.showPosInput)
+        self.newPoint.triggered.connect(self.showPosInput)
+        self.delete.triggered.connect(self.deletePoint)
+
+        self.editPos.setEnabled(self.selectedFlag)
+        self.delete.setEnabled(self.selectedFlag)
+
         self.menu.exec_(pos)
-
-
-
-
-        # print("------------------------总花费时间-------------------------")
-        # print(time.time()-s)
-
 
     # def changePointPos(self):
     #     if not self.showPosFlag:
@@ -205,13 +261,33 @@ class Ui_MyWindow(Ui_MainWindow):
 
     def closePosInput(self):
         if self.showPosFlag:
-            self.posWidget.close()
             self.showPosFlag = False
+            self.dragPicFlag = False
+
+    # 改变点或者新增点, flag为True表示编辑点，flag为False表示增加点
+    def updatePointPos(self, flag):
+        data = self.posWidget.getData()
+        self.posWidget.close()
+        if data:
+            if flag:
+                # 替换点坐标
+                self.x[self.currentIndex], self.y[self.currentIndex] = data
+                self.updateTable(0, data=data, index=self.currentIndex)
+            else:
+                self.x.append(data[0])
+                self.y.append(data[1])
+                self.updateTable(1, data)
+            self.draw_lines.draw(self.x, self.y)
 
 
+    # 删除点
+    def deletePoint(self):
+        if self.selectedFlag:
+            self.x.pop(self.currentIndex)
+            self.y.pop(self.currentIndex)
+            self.draw_lines.draw(self.x, self.y)
+            self.updateTable(-1)
 
-    def updatePointPos(self):
-        pass
 
 
     def keyPress(self, event):
@@ -221,15 +297,6 @@ class Ui_MyWindow(Ui_MainWindow):
         self.keyPressFlag = False
         self.dragPicFlag = False
         self.exportDataToTable([self.x, self.y])
-        # 如果点被拖拽
-        # if self.dragPicFlag:
-            # x, y = event.xdata, event.ydata
-            # 替换该点, 取点的三位小数显示到表格中
-            # self.x[self.currentIndex], self.y[self.currentIndex] = round(x, 3), round(y, 3)
-            # self.draw_lines.draw(self.x, self.y)
-            # self.dragPicFlag = False
-            # 更新表格
-            # self.exportDataToTable([self.x, self.y])
 
     def getPointDistance(self, p1, p2):
         dis = 0
@@ -276,6 +343,31 @@ class Ui_MyWindow(Ui_MainWindow):
     # 坐标换算， 把绘图框中的坐标和鼠标相对于主窗口的坐标进行换算
     def posConversion(self):
         pass
+
+    # flag: 0修改， 1， 增加， -1， 删除
+    def updateTable(self, flag, data=None, index=None):
+        print("--------------update Table-----------------")
+        if flag == 0:
+            x, y = data
+            self.tableWidget.item(index, 0).setText(str(x))
+            self.tableWidget.item(index, 1).setText(str(y))
+
+        elif flag == 1:
+            x, y = data
+            rows, cols = self.tableWidget.rowCount(), self.tableWidget.columnCount()
+            self.tableWidget.setRowCount(rows+1)
+            x_item = QTableWidgetItem()
+            y_item = QTableWidgetItem()
+            x_item.setText(str(x))
+            y_item.setText(str(y))
+            self.tableWidget.setItem(rows, 0, x_item)
+            self.tableWidget.setItem(rows, 1, y_item)
+
+        else:
+            self.tableWidget.removeRow(self.tableWidget.rowCount())
+
+
+
 
 
 

@@ -38,7 +38,7 @@ class DrawLines:
         self.y = []
         self.ax1 = None
 
-
+        self.dataLength = 0
         self.figure = plt.figure(frameon=True, num="10")
         # 几个QWidgets
         self.canvas = MyFigureCanvas(self.figure)
@@ -49,13 +49,8 @@ class DrawLines:
 
         # 设置插值点
         self.coefficient = []
-        self.t_array = np.arange(0, 1.01, 0.01)
-        self.pos_num = 101
-
-
-
-
-
+        self.t_array = np.arange(0, 1.01, 0.02)
+        self.pos_num = len(self.t_array)
 
     def setDrawStyles(self):
         pass
@@ -73,13 +68,21 @@ class DrawLines:
         return self.figure
 
     def draw(self, x, y):
+        print("======================")
+        print(self.dataLength)
+        print(self.x, self.y)
+        print(x, y)
         # 线性插值
         # self.x = [1, 2, 6, 20, 30]
         # self.y = [2, 20, 32, 35, 40]
         self.colorList = ['r', 'r','r', 'b']
         # 贝塞尔插值
         self.bezier_x, self.bezier_y = self.bezierFunc(x, y)
+        print("---------插值完成-------------")
         self.x, self.y = x, y
+        self.dataLength = len(self.x)
+        min_x, max_x = min(self.x), max(self.x)
+        min_y, max_y = min(self.y), max(self.y)
 
         start = time.time()
         # 新建区域ax1
@@ -93,32 +96,34 @@ class DrawLines:
         # 获得绘制的句柄
         self.ax1 = self.figure.add_axes([left, bottom, width, height])
         # self.ax1.set_axis_off()
-        self.ax1.set_xticks(np.arange(0, 55, 5))
-        self.ax1.set_xlim([0, 50])
-        self.ax1.set_yticks(np.arange(0, 55, 5))
-        self.ax1.set_ylim([0, 50])
+        self.ax1.set_xticks(np.arange(min_x-10, max_x+10, 5))
+        self.ax1.set_xlim([min_x-10, max_x+10])
+        self.ax1.set_yticks(np.arange(min_x-10, max_x+10, 5))
+        self.ax1.set_ylim([min_y-10, max_y+10])
         self.ax1.set_title('area1')
-        self.ax1.plot(self.x, self.y, "r-o")
-        self.ax1.plot(self.bezier_x, self.bezier_y, "c-")
+        self.ax1.plot(self.x, self.y, "r-o", label="Curve 1")
+        self.ax1.plot(self.bezier_x, self.bezier_y, "c-", label="Curve 2")
         # print("------------------除算法外共花费时间--------------------")
         # print(time.time() - start)
+        self.figure.legend()
         self.canvas.draw()
 
     def getCoefficient(self, n):
+        print("1")
         if n in self.coefficientDict:
             coefficient = self.coefficientDict[n]
+            print("2")
         else:
+            print("3")
             coefficient = np.zeros(n + 1, np.int32)
             for i in range(n + 1):
                 # 计算系数矩阵
                 coefficient[i] = comb(n, i)
             self.coefficientDict[n] = coefficient
-            print("=============")
         return coefficient
 
-
     def bezierFunc(self, x, y):
-
+        print("-----------开始插值---------------")
         start = time.time()
         # 普通公式算法
         '''
@@ -140,16 +145,17 @@ class DrawLines:
         #     b_yList.append(y_temp)
         # return b_xList, b_yList
         '''
-
+        print("---------------")
+        print(x, y)
+        print(self.x, self.y)
         # 矩阵算法
-
         n = len(x) - 1
+        print(n, len(self.x) - 1)
         # print("data shape is {}".format(data.shape))
         # 如果点个数与上一次相同不重复计算 S*T矩阵
-        if n != len(self.x) - 1:
+        if n != self.dataLength - 1:
             self.coefficient = self.getCoefficient(n)
-            self.t_array = np.arange(0, 1.01, 0.01)
-            self.pos_num = 101
+            print("-----------获取系数矩阵---------------")
 
             S = np.zeros((n+1, self.pos_num), dtype=np.float32)
             T = np.zeros((n+1, self.pos_num), dtype=np.float32)
@@ -158,19 +164,19 @@ class DrawLines:
                 S[i, :] = np.power((1-self.t_array), n-i)
                 T[i, :] = np.power(self.t_array, i)
             self.st = S * T
-
-
-        # print("S shape is {}, T shape is {}， st shape is {}".format(S.shape, T.shape, st.shape))
+            print("-----------新建完成---------------")
+        print('-=-=')
+        print("S shape is, T shape is ， st shape is {}".format(self.st.shape))
         P_x = np.tile(x, (self.pos_num, 1)).T
         P_y = np.tile(y, (self.pos_num, 1)).T
-        # print("P_x shape is {}, P_y shape is {}".format(P_x.shape, P_y.shape))
+        print("P_x shape is {}, P_y shape is {}".format(P_x.shape, P_y.shape))
         M_x = P_x * self.st
         M_y = P_y * self.st
-        # print("M_x shape is {}, M_y shape is {}".format(M_x.shape, M_y.shape))
+        print("M_x shape is {}, M_y shape is {}".format(M_x.shape, M_y.shape))
         # 从缓存中读取数据
         B_x = np.dot(self.coefficient, M_x)
         B_y = np.dot(self.coefficient, M_y)
-        # print("B_x shape is {}, B_y shape is {}".format(B_x.shape, B_y.shape))
+        print("B_x shape is {}, B_y shape is {}".format(B_x.shape, B_y.shape))
         print("------------------该算法计算共花费--------------------")
         print(time.time()-start)
         return B_x.tolist(), B_y.tolist()
