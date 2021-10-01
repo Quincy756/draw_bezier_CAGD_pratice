@@ -201,16 +201,6 @@ class DrawLines:
         # return b_xList, b_yList
 
 
-
-
-
-
-
-
-
-
-
-
 # 定义插值算法类
 class InterpolAlgo:
     def __init__(self, pointSet):
