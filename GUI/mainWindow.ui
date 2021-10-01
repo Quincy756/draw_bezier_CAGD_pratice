@@ -384,7 +384,7 @@
   </action>
   <action name="action_2">
    <property name="text">
-    <string>插入</string>
+    <string>导入</string>
    </property>
   </action>
  </widget>

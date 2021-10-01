@@ -11,6 +11,7 @@ from drawCurves.DrawCurves import *
 from Data.processExcel import *
 from PyQt5.QtCore import Qt
 import math
+import time
 
 
 class MyWindow(QMainWindow):
@@ -94,6 +95,7 @@ class Ui_MyWindow(Ui_MainWindow):
     # 改变状态栏信息
     def changeMessage(self, event):
         # message = str(event.x-21) + "," + str(event.y-21)
+        s = time.time()
         x_select, y_select = event.xdata, event.ydata
         message = ""
         if self.dragPicFlag:
@@ -125,6 +127,9 @@ class Ui_MyWindow(Ui_MainWindow):
             except Exception as ex:
                 print(ex)
 
+        # print("------------------------总花费时间-------------------------")
+        # print(time.time()-s)
+
     def keyPress(self, event):
         self.keyPressFlag = True
 
@@ -148,8 +153,6 @@ class Ui_MyWindow(Ui_MainWindow):
             dis += (p1[i]-p2[i])**2
         return dis**0.5
 
-
-
     def activateMenu(self):
         self.process_data = processData(self.data)
         self.action.triggered.connect(lambda: self.process_data.saveData())
@@ -160,7 +163,7 @@ class Ui_MyWindow(Ui_MainWindow):
     def exportDataToTable(self, data=[]):
         rows, cols = len(data[0]), len(data)
         self.tableWidget.setRowCount(rows)
-        self.tableWidget.setColumnCount(rows)
+        self.tableWidget.setColumnCount(cols)
         for row in range(rows):
             for col in range(cols):
                 item = QTableWidgetItem()
@@ -168,19 +171,19 @@ class Ui_MyWindow(Ui_MainWindow):
                 self.tableWidget.setItem(row, col, item)
 
     def getTableData(self):
-        data = []
+        data_list = []
         rows, cols = self.tableWidget.rowCount(), self.tableWidget.columnCount()
         print(rows, cols)
         for col in range(cols):
             temp = []
             for row in range(rows):
                 data = self.tableWidget.item(row, col).text()
-                print(data)
+                print(col, row, data)
                 if data:
                     temp.append(int(data))
-            data.append(temp)
-        print(data)
-        self.data = data
+            data_list.append(temp)
+        print(data_list)
+        self.data = data_list
         self.process_data.setData(self.data)
 
     def setFig(self):

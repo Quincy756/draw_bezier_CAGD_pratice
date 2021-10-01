@@ -234,4 +234,4 @@ class Ui_MainWindow(object):
         self.action_6.setText(_translate("MainWindow", "从excel导入数据点"))
         self.action_7.setText(_translate("MainWindow", "从"))
         self.action.setText(_translate("MainWindow", "保存"))
-        self.action_2.setText(_translate("MainWindow", "插入"))
+        self.action_2.setText(_translate("MainWindow", "导入"))
