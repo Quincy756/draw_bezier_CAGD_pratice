@@ -253,12 +253,6 @@ class Ui_MyWindow(Ui_MainWindow):
 
         self.menu.exec_(pos)
 
-    # def changePointPos(self):
-    #     if not self.showPosFlag:
-    #         texts = [str(self.pos_x), str(self.pos_y)]
-    #         x, y = (QCursor.pos().x(), QCursor.pos().y())
-    #         self.showPosInput(x + 20, y + 20, texts)
-
     def closePosInput(self):
         if self.showPosFlag:
             self.showPosFlag = False
@@ -365,8 +359,6 @@ class Ui_MyWindow(Ui_MainWindow):
 
         else:
             self.tableWidget.removeRow(self.tableWidget.rowCount())
-
-
 
 
 
