@@ -9,7 +9,8 @@ import sys
 from GUI.mainWindow import Ui_MainWindow
 from drawCurves.DrawCurves import *
 from Data.processExcel import *
-
+from PyQt5.QtCore import Qt
+import math
 
 
 class MyWindow(QMainWindow):
@@ -43,6 +44,12 @@ class Ui_MyWindow(Ui_MainWindow):
     def setupUi(self, Window):
         super(Ui_MyWindow, self).setupUi(Window)
         self.data = None
+        self.x, self.y = [1, 2, 6, 20, 30], [2, 20, 32, 35, 40]
+
+        self.keyPressFlag = False
+        self.dragPicFlag = False
+        self.currentIndex = 0
+
         self.activateMenu()
         self.main_tabWidget = QTabWidget()
         self.horizontalLayout.addWidget(self.main_tabWidget)
@@ -74,24 +81,74 @@ class Ui_MyWindow(Ui_MainWindow):
 
     def setCanvas(self):
         self.canvas.mpl_connect("motion_notify_event", self.changeMessage)  # 支持鼠标移动
+        self.canvas.mpl_connect("button_press_event", self.keyPress)  # 支持鼠标移动
+        self.canvas.mpl_connect("button_release_event", self.keyRelease)  # 支持鼠标移动
 
     def draw(self):
         self.setCanvas()
+        self.draw_lines.draw(self.x, self.y)
         # 设置布局
         self.canvas.draw()
+        self.exportDataToTable([self.x, self.y])
 
     # 改变状态栏信息
     def changeMessage(self, event):
         # message = str(event.x-21) + "," + str(event.y-21)
-        x, y = event.xdata, event.ydata
-        message = str(x) + "," + str(y)
-        self.statusbar.showMessage(message)
+        x_select, y_select = event.xdata, event.ydata
+        message = ""
+        if self.dragPicFlag:
+            self.x[self.currentIndex], self.y[self.currentIndex] = round(x_select, 3), round(y_select, 3)
+            self.draw_lines.draw(self.x, self.y)
+        else:
+            try:
+                index = 0
+                for x, y in zip(self.draw_lines.x, self.draw_lines.y):
+                    if self.getPointDistance((x, y), (x_select, y_select)) < 0.5:
+                        message = str(x) + "," + str(y)
+                        self.main_tabWidget.setCursor(Qt.SizeAllCursor)
+                        if self.keyPressFlag:
+                            self.dragPicFlag = True
+                            self.currentIndex = index
+                            # 替换该点, 取点的三位小数显示到表格中
+                            # self.x[self.currentIndex], self.y[self.currentIndex] = round(x_select, 3), round(y_select, 3)
+                            # self.draw_lines.draw(self.x, self.y)
+                            # self.dragPicFlag = False
+                        else:
+                            self.dragPicFlag = False
+                        break
+                    else:
+                        if self.dragPicFlag: self.main_tabWidget.setCursor(Qt.SizeAllCursor)
+                        else: self.main_tabWidget.setCursor(Qt.ArrowCursor)
+                        message = str(x_select) + "," + str(y_select)
+                    index += 1
+                self.statusbar.showMessage(message)
+            except Exception as ex:
+                print(ex)
 
+    def keyPress(self, event):
+        print(event)
+        self.keyPressFlag = True
 
+    def keyRelease(self, event):
+        print(event)
+        self.keyPressFlag = False
+        self.dragPicFlag = False
+        self.exportDataToTable([self.x, self.y])
+        # 如果点被拖拽
+        # if self.dragPicFlag:
+            # x, y = event.xdata, event.ydata
+            # 替换该点, 取点的三位小数显示到表格中
+            # self.x[self.currentIndex], self.y[self.currentIndex] = round(x, 3), round(y, 3)
+            # self.draw_lines.draw(self.x, self.y)
+            # self.dragPicFlag = False
+            # 更新表格
+            # self.exportDataToTable([self.x, self.y])
 
-
-
-
+    def getPointDistance(self, p1, p2):
+        dis = 0
+        for i in range(len(p1)):
+            dis += (p1[i]-p2[i])**2
+        return dis**0.5
 
 
 

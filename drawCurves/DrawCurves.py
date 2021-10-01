@@ -34,11 +34,11 @@ class DrawLines:
     def __init__(self):
         self.x_pointSet = []
         self.y_pointSet = []
+        self.ax1 = None
 
 
         self.figure = plt.figure(frameon=True, num="10")
         # 几个QWidgets
-        self.draw()
         self.canvas = MyFigureCanvas(self.figure)
 
     def setDrawStyles(self):
@@ -56,22 +56,36 @@ class DrawLines:
     def getFigure(self):
         return self.figure
 
-    def draw(self, data=[None]*2):
-        self.x, self.y = data[0], data[1]
+    def draw(self, x, y):
+        self.x, self.y = x, y
         # 线性插值
-        self.x = [1, 2, 6, 20, 30]
-        self.y = [2, 20, 32, 35, 40]
+        # self.x = [1, 2, 6, 20, 30]
+        # self.y = [2, 20, 32, 35, 40]
+        self.colorList = ['r', 'r','r', 'b']
         # 贝塞尔插值
         self.bezier_x, self.bezier_y = self.bezierFunc()
 
         # 新建区域ax1
         # figure的百分比,从figure 10%的位置开始绘制, 宽高是figure的80%
         left, bottom, width, height = 0.05, 0.05, 0.94, 0.94
+        if self.ax1 and self.figure:
+            self.ax1.cla()
+            self.figure.clf()
+            # self.canvas.draw()
+
         # 获得绘制的句柄
         self.ax1 = self.figure.add_axes([left, bottom, width, height])
-        self.ax1.plot(self.x, self.y, 'r-o' )
+        # self.ax1.set_axis_off()
+        self.ax1.set_xticks(np.arange(0, 40, 5))
+        self.ax1.set_xlim([0, 50])
+        self.ax1.set_yticks(np.arange(0, 40, 5))
+        self.ax1.set_ylim([0, 50])
         self.ax1.set_title('area1')
-        self.ax1.plot(self.bezier_x, self.bezier_y, 'b')
+        self.ax1.plot(self.x, self.y, "r-o")
+        self.ax1.plot(self.bezier_x, self.bezier_y, "c-")
+        self.canvas.draw()
+
+
 
     def bezierFunc(self):
         t_array = np.arange(0, 1.0001, 0.0001)
@@ -93,21 +107,6 @@ class DrawLines:
             b_yList.append(y_temp)
         return b_xList, b_yList
 
-
-
-
-
-            except Exception as ex:
-                print(ex)
-
-
-
-        #
-        # for x, y in zip(self.x, self.y):
-        #     for t in t_array:
-        #         b_x = (1-t) * x + t*
-        #         b_y = (1-t) * y + t*
-        #         res.append()
 
 
 

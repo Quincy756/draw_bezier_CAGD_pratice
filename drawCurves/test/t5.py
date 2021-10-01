@@ -65,6 +65,9 @@ class App(QWidget):
         # ax.clf()  # 清图。  # 清坐标轴。
         ax.cla()
         # ax.set_axis_off()
+        ax.set_xticks([0, 0.2, 0.4, 0.6, 0.8, 1.0])
+        ax.set_yticks([0, 0.2, 0.4, 0.6, 0.8, 1.0])
+        # ax.set_autoscale_on(False)
         ax.plot(self.x)
         self.canvas.draw()
 
