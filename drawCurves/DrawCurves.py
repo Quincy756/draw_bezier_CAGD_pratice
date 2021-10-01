@@ -88,7 +88,7 @@ class DrawLines:
 
 
     def bezierFunc(self):
-        t_array = np.arange(0, 1.0001, 0.0001)
+        t_array = np.arange(0, 1.01, 0.01)
         b_xList = []
         b_yList = []
         # 点的个数要比阶数大1
