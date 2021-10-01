@@ -76,9 +76,9 @@ class DrawLines:
         # 获得绘制的句柄
         self.ax1 = self.figure.add_axes([left, bottom, width, height])
         # self.ax1.set_axis_off()
-        self.ax1.set_xticks(np.arange(0, 40, 5))
+        self.ax1.set_xticks(np.arange(0, 55, 5))
         self.ax1.set_xlim([0, 50])
-        self.ax1.set_yticks(np.arange(0, 40, 5))
+        self.ax1.set_yticks(np.arange(0, 55, 5))
         self.ax1.set_ylim([0, 50])
         self.ax1.set_title('area1')
         self.ax1.plot(self.x, self.y, "r-o")
@@ -95,6 +95,25 @@ class DrawLines:
         point_num = len(self.x)
         # 阶数
         n = point_num - 1
+        # for t in t_array:
+        #     x_temp = 0.0
+        #     y_temp = 0.0
+        #     for i in range(n+1):
+        #         # 计算系数
+        #         coefficient = comb(n, i)
+        #         x_temp += coefficient * self.x[i] * ((1.0-t)**(n-i)) * (t**i)
+        #         y_temp += coefficient * self.y[i] * ((1.0-t)**(n-i)) * (t**i)
+        #     b_xList.append(x_temp)
+        #     b_yList.append(y_temp)
+        # return b_xList, b_yList
+        data = np.array([self.x, self.y], dtype=np.float32)
+        data = data.T
+        coefficient = np.zeros(n+1, np.int32)
+        for i in range(n+1):
+            # 计算系数矩阵
+            coefficient[i] = comb(n, i)
+        res = np.dot(coefficient, data)
+
         for t in t_array:
             x_temp = 0.0
             y_temp = 0.0
@@ -106,6 +125,9 @@ class DrawLines:
             b_xList.append(x_temp)
             b_yList.append(y_temp)
         return b_xList, b_yList
+
+
+
 
 
 

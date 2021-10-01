@@ -97,7 +97,7 @@ class Ui_MyWindow(Ui_MainWindow):
         x_select, y_select = event.xdata, event.ydata
         message = ""
         if self.dragPicFlag:
-            self.x[self.currentIndex], self.y[self.currentIndex] = round(x_select, 3), round(y_select, 3)
+            self.x[self.currentIndex], self.y[self.currentIndex] = round(x_select, 1), round(y_select, 1)
             self.draw_lines.draw(self.x, self.y)
         else:
             try:
@@ -126,11 +126,9 @@ class Ui_MyWindow(Ui_MainWindow):
                 print(ex)
 
     def keyPress(self, event):
-        print(event)
         self.keyPressFlag = True
 
     def keyRelease(self, event):
-        print(event)
         self.keyPressFlag = False
         self.dragPicFlag = False
         self.exportDataToTable([self.x, self.y])
