@@ -25,13 +25,13 @@ class ExcelHandle:
             self.wb = wb
             # 打开表格
             # 打开表单名，如果表单不存在则创建新表单
-            print("======")
+            # print("======")
             if sheetName not in self.wb.sheetnames:
                 self.currentSheet = self.wb.create_sheet(sheetName)
 
             self.currentSheet = self.wb[sheetName]
             self.currentSheet = self.wb.active
-            print("-------")
+            # print("-------")
         except Exception as ex:
             self.data = []
 
@@ -88,6 +88,7 @@ class processData:
             if file_name == "Excel Files (*.xlsx)":
                 # 调用main.py 中的获取表格数据点函数
                 self.updateFunc[1]()
+                print("---------------")
                 print(self.data)
                 self.excel.saveData(file_path)
 

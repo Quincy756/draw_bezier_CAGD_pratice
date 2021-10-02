@@ -26,6 +26,7 @@ class MyWindow(QMainWindow):
     def __init__(self):
         super(QMainWindow, self).__init__()
 
+
 class CanvasWidget(QWidget):
     def __init__(self):
         super(QWidget, self).__init__()
@@ -101,7 +102,6 @@ class InputPointWdt(QWidget):
         self.closeFunc()
 
 
-
 class Ui_MyWindow(Ui_MainWindow):
 
     def __init__(self, mainWindow):
@@ -119,12 +119,15 @@ class Ui_MyWindow(Ui_MainWindow):
         # 记录鼠标在状态栏中的位置
         self.pos_x, self.pos_y =  0, 0
         self.selectedPoint = ()
+        self.dataLength = len(self.x)
 
         self.keyPressFlag = False
         self.dragPicFlag = False
         self.showPosFlag = False
         self.selectedFlag = False
         self.currentIndex = 0
+        # 点是否被选中的列表
+        self.selectedFlagList = [False]*self.dataLength
 
         self.activateMenu()
         self.main_tabWidget = QTabWidget()
@@ -142,14 +145,7 @@ class Ui_MyWindow(Ui_MainWindow):
 
         self.canvasWidget.setMouseTracking(True)
         self.canvasWidget.setContextMenuFunc(self.showContextMenu)
-
         self.draw()
-        # 几个QWidgets
-        # self.button_draw = QPushButton("绘图")
-        # 连接事件
-        # self.button_draw.clicked.connect(self.draw)
-        # self.horizontalLayout.addWidget(self.button_draw)
-
 
     def getFunc(self, func, *args, **kwargs):
         self.myFunc = func
@@ -190,23 +186,23 @@ class Ui_MyWindow(Ui_MainWindow):
 
     # 移动鼠标时改变状态栏信息，拖拽曲线
     def changeMessage(self, event):
-        # message = str(event.x-21) + "," + str(event.y-21)
-        s = time.time()
         self.pos_x, self.pos_y = event.xdata, event.ydata
-        message = ""
-
-        if self.dragPicFlag:
-            self.x[self.currentIndex], self.y[self.currentIndex] = round(self.pos_x, 1), round(self.pos_y, 1)
-            self.draw_lines.draw(self.x, self.y)
-        else:
-            try:
+        # 如果鼠标在画图区域内
+        if self.pos_x and self.pos_y:
+            message = ""
+            # 如果按钮按下且处于拖拽状态，直接画出线段
+            if self.keyPressFlag and self.dragPicFlag:
+                self.x[self.currentIndex], self.y[self.currentIndex] = round(self.pos_x, 1), round(self.pos_y, 1)
+                self.draw_lines.draw(self.x, self.y)
+            else:
+                # 如果已停止拖拽，鼠标移到点集附近时自动选中该点
                 index = 0
                 for x, y in zip(self.draw_lines.x, self.draw_lines.y):
                     if self.getPointDistance((x, y), (self.pos_x, self.pos_y)) < 0.5:
                         # 选中
                         self.selectedFlag = True
                         # print(self.selectedFlag)
-                        message = str(x) + "," + str(y)
+                        message = "已选中 " + "x :" + str(x) + ", y :" + str(y)
                         self.main_tabWidget.setCursor(Qt.CrossCursor)
 
                         self.selectedPoint = (x, y)
@@ -222,15 +218,18 @@ class Ui_MyWindow(Ui_MainWindow):
                         # 未选中点时
                         self.selectedFlag = False
                         # self.closePosInput()
-
                         if self.dragPicFlag: self.main_tabWidget.setCursor(Qt.CrossCursor)
                         else: self.main_tabWidget.setCursor(Qt.ArrowCursor)
-                        message = str(round(self.pos_x, 3)) + "," + str(round(self.pos_y, 3))
+                        message = "x :" + str(round(self.pos_x, 3)) + ", y :" + str(round(self.pos_y, 3))
                     index += 1
                 self.statusbar.showMessage(message)
-            except Exception as ex:
-                pass
-                print(ex)
+
+            if event.dblclick:
+                self.doubleClickFlag = True
+
+        # 未移动到绘图区域时时
+        else:
+            self.statusbar.showMessage("未选中点！")
 
     # 展示右键菜单
     def showContextMenu(self, pos):
@@ -249,7 +248,7 @@ class Ui_MyWindow(Ui_MainWindow):
         self.delete.triggered.connect(self.deletePoint)
 
         self.editPos.setEnabled(self.selectedFlag)
-        self.delete.setEnabled(self.selectedFlag)
+        # self.delete.setEnabled()
 
         self.menu.exec_(pos)
 
@@ -270,27 +269,49 @@ class Ui_MyWindow(Ui_MainWindow):
             else:
                 self.x.append(data[0])
                 self.y.append(data[1])
+                self.selectedFlagList.append(False)
                 self.updateTable(1, data)
+                self.dataLength += 1
+                # print(self.selectedFlagList)
             self.draw_lines.draw(self.x, self.y)
-
 
     # 删除点
     def deletePoint(self):
-        if self.selectedFlag:
-            self.x.pop(self.currentIndex)
-            self.y.pop(self.currentIndex)
-            self.draw_lines.draw(self.x, self.y)
-            self.updateTable(-1)
-
-
+        print("----------------------删除点集------------------------------")
+        print(self.selectedFlagList)
+        index_list = [index for index in range(self.dataLength) if self.selectedFlagList[index]]
+        self.x = [self.x[index] for index in range(self.dataLength) if index not in index_list]
+        self.y = [self.y[index] for index in range(self.dataLength) if index not in index_list]
+        print(self.x, self.y)
+        self.selectedFlagList = [self.selectedFlagList[index] for index in range(self.dataLength) if index not in index_list]
+        print(self.selectedFlagList)
+        self.draw_lines.draw(self.x, self.y)
+        print(index_list)
+        self.updateTable(-1, None, None, index_list)
+        self.dataLength = len(self.x)
 
     def keyPress(self, event):
-        self.keyPressFlag = True
+        if not event.dblclick:
+            self.keyPressFlag = True
+            if self.selectedFlag:
+                self.selectedFlagList[self.currentIndex] = not self.selectedFlagList[self.currentIndex]
+                self.updatePointColor()
+
+    def updatePointColor(self):
+        self.draw_lines.updateScatter(self.selectedFlagList)
+        self.canvas.draw()
+
 
     def keyRelease(self, event):
-        self.keyPressFlag = False
-        self.dragPicFlag = False
-        self.exportDataToTable([self.x, self.y])
+        # print(event)
+        if not event.dblclick:
+            self.keyPressFlag = False
+            if self.dragPicFlag:
+                self.exportDataToTable([self.x, self.y])
+                self.dragPicFlag = False
+            elif self.selectedFlag:
+                pass
+
 
     def getPointDistance(self, p1, p2):
         dis = 0
@@ -306,6 +327,7 @@ class Ui_MyWindow(Ui_MainWindow):
         self.setFig()
 
     def exportDataToTable(self, data=[]):
+        self.statusbar.showMessage("表格数据导入中")
         rows, cols = len(data[0]), len(data)
         self.tableWidget.setRowCount(rows)
         self.tableWidget.setColumnCount(cols)
@@ -314,32 +336,30 @@ class Ui_MyWindow(Ui_MainWindow):
                 item = QTableWidgetItem()
                 item.setText(str(data[col][row]))
                 self.tableWidget.setItem(row, col, item)
+        self.statusbar.showMessage("表格数据导入完成！")
 
     def getTableData(self):
+        print("---------------正在保存信息-------------------")
         data_list = []
         rows, cols = self.tableWidget.rowCount(), self.tableWidget.columnCount()
-        print(rows, cols)
         for col in range(cols):
             temp = []
             for row in range(rows):
                 data = self.tableWidget.item(row, col).text()
                 print(col, row, data)
                 if data:
-                    temp.append(int(data))
+                    temp.append(float(data))
             data_list.append(temp)
-        print(data_list)
         self.data = data_list
         self.process_data.setData(self.data)
+        self.statusbar.showMessage("保存完成！")
 
     def setFig(self):
         self.process_data.setFig(self.draw_lines.getFigure())
 
-    # 坐标换算， 把绘图框中的坐标和鼠标相对于主窗口的坐标进行换算
-    def posConversion(self):
-        pass
 
     # flag: 0修改， 1， 增加， -1， 删除
-    def updateTable(self, flag, data=None, index=None):
+    def updateTable(self, flag, data=None, index=None, rows=[]):
         print("--------------update Table-----------------")
         if flag == 0:
             x, y = data
@@ -358,7 +378,12 @@ class Ui_MyWindow(Ui_MainWindow):
             self.tableWidget.setItem(rows, 1, y_item)
 
         else:
-            self.tableWidget.removeRow(self.tableWidget.rowCount())
+            # 逆序删除，防止报错
+            rows.reverse()
+            for i in rows:
+                self.tableWidget.removeRow(i)
+        self.statusbar.showMessage("表格数据更新完成！")
+
 
 
 
