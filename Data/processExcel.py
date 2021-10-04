@@ -43,7 +43,7 @@ class ExcelHandle:
         self.currentSheet.cell(1, 2).value = "y"
         columns = len(self.data)
         rows = len(self.data[0]) + 1
-        print("data")
+        # print("data")
         for row in range(2, rows+1):
             for col in range(1, columns+1):
                 self.currentSheet.cell(row, col).value = self.data[col-1][row-2]
@@ -58,13 +58,13 @@ class ExcelHandle:
         columns = self.currentSheet.max_column
         x_header = self.currentSheet.cell(1, 1).value
         y_header = self.currentSheet.cell(1, 2).value
-        print(rows, columns)
+        # print(rows, columns)
         data = []
-        print(data)
+        # print(data)
         for col in range(1, columns+1):
             temp = []
             for row in range(2, rows + 1):
-                print(self.currentSheet.cell(row, col).value)
+                # print(self.currentSheet.cell(row, col).value)
                 temp.append(self.currentSheet.cell(row, col).value)
             data.append(temp)
         return data
@@ -88,8 +88,8 @@ class processData:
             if file_name == "Excel Files (*.xlsx)":
                 # 调用main.py 中的获取表格数据点函数
                 self.updateFunc[1]()
-                print("---------------")
-                print(self.data)
+                # print("---------------")
+                # print(self.data)
                 self.excel.saveData(file_path)
 
             elif file_name == "Figure Files(*.fig)":

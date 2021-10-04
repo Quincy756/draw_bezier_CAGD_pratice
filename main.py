@@ -9,7 +9,7 @@ import sys
 from GUI.mainWindow import Ui_MainWindow
 from drawCurves.DrawCurves import *
 from Data.processExcel import *
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import Qt, QPoint
 import math
 import time
 import src
@@ -20,6 +20,26 @@ def getIcon(path):
     # 注意 scaled() 返回一个 QPixmap
     return QIcon(file_fit_pixmap)
 
+class MyMenu(QMenu):
+    def __init__(self):
+        super(QMenu, self).__init__()
+        self.newPoint = QAction("增加点")
+        self.delete = QAction("删除点")
+        self.cancel = QAction("取消")
+        self.addAction(self.newPoint)
+        self.addAction(self.delete)
+        self.addSeparator()
+        self.addAction(self.cancel)
+        self.cancel.triggered.connect(self.close)
+
+
+class MyPointMenu(QMenu):
+    def __init__(self):
+        super(QMenu, self).__init__()
+
+class MyTableMenu(QMenu):
+    def __init__(self):
+        super(QMenu, self).__init__()
 
 
 class MyWindow(QMainWindow):
@@ -141,10 +161,24 @@ class Ui_MyWindow(Ui_MainWindow):
         self.canvasLayout = QHBoxLayout()
         self.canvasLayout.addWidget(self.canvas)
         self.canvasWidget.setLayout(self.canvasLayout)
-        self.main_tabWidget.addTab(self.canvasWidget, "1")
+        self.main_tabWidget.addTab(self.canvasWidget, "tab1")
+        self.main_tabWidget.setTabsClosable(True)
+        self.main_tabWidget.tabCloseRequested.connect(self.closeCurrentTab)
 
         self.canvasWidget.setMouseTracking(True)
         self.canvasWidget.setContextMenuFunc(self.showContextMenu)
+
+        # 设置表格行列宽度
+        self.tableWidget.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        self.tableWidget.verticalHeader().setSectionResizeMode(QHeaderView.Interactive)
+        # 设置events_table的右键菜单
+        self.tableWidget.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.tableWidget.customContextMenuRequested.connect(self.showTableMenu)
+
+        self.tableWidget.cellDoubleClicked.connect(self.setCurrentItem)
+        self.tableWidget.cellChanged.connect(self.checkTableInput)
+
+        self.dockWidget.setFeatures(QDockWidget.AllDockWidgetFeatures)
         self.draw()
 
     def getFunc(self, func, *args, **kwargs):
@@ -233,24 +267,20 @@ class Ui_MyWindow(Ui_MainWindow):
 
     # 展示右键菜单
     def showContextMenu(self, pos):
-        self.menu = QMenu()
-        self.editPos = QAction("编辑坐标")
-        self.newPoint = QAction("新建")
-        self.cancel = QAction("取消")
-        self.delete = QAction("删除")
-        self.menu.addAction(self.editPos)
-        self.menu.addAction(self.newPoint)
-        self.menu.addAction(self.delete)
-        self.menu.addSeparator()
-        self.menu.addAction(self.cancel)
-        self.editPos.triggered.connect(self.showPosInput)
-        self.newPoint.triggered.connect(self.showPosInput)
-        self.delete.triggered.connect(self.deletePoint)
+        self.point_menu = MyMenu()
+        self.point_menu.editPos = QAction("编辑")
+        self.point_menu.insertAction(self.point_menu.newPoint, self.point_menu.editPos)
+        self.point_menu.editPos.triggered.connect(self.showPosInput)
+        self.point_menu.newPoint.triggered.connect(self.showPosInput)
+        self.point_menu.delete.triggered.connect(self.deletePoint)
+        self.point_menu.editPos.setEnabled(self.selectedFlag)
+        # 如果没有选中点则删除不可用
+        if True in self.selectedFlagList:
+            self.point_menu.delete.setEnabled(True)
+        else:
+            self.point_menu.delete.setEnabled(False)
 
-        self.editPos.setEnabled(self.selectedFlag)
-        # self.delete.setEnabled()
-
-        self.menu.exec_(pos)
+        self.point_menu.exec_(pos)
 
     def closePosInput(self):
         if self.showPosFlag:
@@ -267,40 +297,63 @@ class Ui_MyWindow(Ui_MainWindow):
                 self.x[self.currentIndex], self.y[self.currentIndex] = data
                 self.updateTable(0, data=data, index=self.currentIndex)
             else:
-                self.x.append(data[0])
-                self.y.append(data[1])
-                self.selectedFlagList.append(False)
-                self.updateTable(1, data)
+                index = self.currentIndex+1 if True in self.selectedFlagList else self.dataLength
+                self.x.insert(index, data[0])
+                self.y.insert(index, data[1])
+                self.updateTable(1, index=index, data=data)
                 self.dataLength += 1
                 # print(self.selectedFlagList)
+            self.selectedFlagList = [False] * (self.dataLength)
             self.draw_lines.draw(self.x, self.y)
 
+    # 提醒保存
+    def closeCurrentTab(self):
+        response_btn =  QMessageBox.warning(self.window, "保存提示", "是否保存？", QMessageBox.Yes|QMessageBox.No, QMessageBox.Yes)
+        if response_btn == QMessageBox.Yes:
+            self.process_data.saveData()
+        self.main_tabWidget.removeTab(self.main_tabWidget.currentIndex())
+        self.tabWidget_2.removeTab(self.tabWidget_2.currentIndex())
     # 删除点
     def deletePoint(self):
-        print("----------------------删除点集------------------------------")
-        print(self.selectedFlagList)
+        # print("----------------------删除点集------------------------------")
+        # print(self.selectedFlagList)
         index_list = [index for index in range(self.dataLength) if self.selectedFlagList[index]]
         self.x = [self.x[index] for index in range(self.dataLength) if index not in index_list]
         self.y = [self.y[index] for index in range(self.dataLength) if index not in index_list]
-        print(self.x, self.y)
+        # print(self.x, self.y)
         self.selectedFlagList = [self.selectedFlagList[index] for index in range(self.dataLength) if index not in index_list]
-        print(self.selectedFlagList)
+        # print(self.selectedFlagList)
         self.draw_lines.draw(self.x, self.y)
-        print(index_list)
+        # print(index_list)
         self.updateTable(-1, None, None, index_list)
         self.dataLength = len(self.x)
 
     def keyPress(self, event):
-        if not event.dblclick:
-            self.keyPressFlag = True
-            if self.selectedFlag:
-                self.selectedFlagList[self.currentIndex] = not self.selectedFlagList[self.currentIndex]
+        # 如果是左键按下
+        if event.button == 1:
+            # 不是双击左键
+            if not event.dblclick:
+                self.keyPressFlag = True
+                if self.selectedFlag:
+                    self.selectedFlagList[self.currentIndex] = not self.selectedFlagList[self.currentIndex]
+                else:
+                    self.selectedFlagList[self.currentIndex] = False
+                print(self.selectedFlagList)
                 self.updatePointColor()
+
+    def setCurrentItem(self, row, col):
+        self.currentItemText = self.tableWidget.item(row, col).text()
+
+    def checkTableInput(self, row, col):
+        try:
+            temp = float(self.tableWidget.item(row, col).text())
+        except Exception as ex:
+            response_btn = QMessageBox.warning(self.tableWidget, "输入错误", "请输入一个小数！", QMessageBox.Yes)
+            self.tableWidget.item(row, col).setText(self.currentItemText)
 
     def updatePointColor(self):
         self.draw_lines.updateScatter(self.selectedFlagList)
         self.canvas.draw()
-
 
     def keyRelease(self, event):
         # print(event)
@@ -311,7 +364,6 @@ class Ui_MyWindow(Ui_MainWindow):
                 self.dragPicFlag = False
             elif self.selectedFlag:
                 pass
-
 
     def getPointDistance(self, p1, p2):
         dis = 0
@@ -335,18 +387,19 @@ class Ui_MyWindow(Ui_MainWindow):
             for col in range(cols):
                 item = QTableWidgetItem()
                 item.setText(str(data[col][row]))
+                item.setTextAlignment(Qt.AlignCenter)
                 self.tableWidget.setItem(row, col, item)
         self.statusbar.showMessage("表格数据导入完成！")
 
     def getTableData(self):
-        print("---------------正在保存信息-------------------")
+        # print("---------------正在保存信息-------------------")
         data_list = []
         rows, cols = self.tableWidget.rowCount(), self.tableWidget.columnCount()
         for col in range(cols):
             temp = []
             for row in range(rows):
                 data = self.tableWidget.item(row, col).text()
-                print(col, row, data)
+                # print(col, row, data)
                 if data:
                     temp.append(float(data))
             data_list.append(temp)
@@ -357,10 +410,10 @@ class Ui_MyWindow(Ui_MainWindow):
     def setFig(self):
         self.process_data.setFig(self.draw_lines.getFigure())
 
-
     # flag: 0修改， 1， 增加， -1， 删除
-    def updateTable(self, flag, data=None, index=None, rows=[]):
-        print("--------------update Table-----------------")
+    def updateTable(self, flag, data=[0]*2, index=None, rows=[]):
+        # print("--------------update Table-----------------")
+        index = self.dataLength - 1 if not index else index
         if flag == 0:
             x, y = data
             self.tableWidget.item(index, 0).setText(str(x))
@@ -369,13 +422,15 @@ class Ui_MyWindow(Ui_MainWindow):
         elif flag == 1:
             x, y = data
             rows, cols = self.tableWidget.rowCount(), self.tableWidget.columnCount()
-            self.tableWidget.setRowCount(rows+1)
+            self.tableWidget.insertRow(index)
             x_item = QTableWidgetItem()
             y_item = QTableWidgetItem()
+            x_item.setTextAlignment(Qt.AlignCenter)
+            y_item.setTextAlignment(Qt.AlignCenter)
             x_item.setText(str(x))
             y_item.setText(str(y))
-            self.tableWidget.setItem(rows, 0, x_item)
-            self.tableWidget.setItem(rows, 1, y_item)
+            self.tableWidget.setItem(index, 0, x_item)
+            self.tableWidget.setItem(index, 1, y_item)
 
         else:
             # 逆序删除，防止报错
@@ -384,7 +439,30 @@ class Ui_MyWindow(Ui_MainWindow):
                 self.tableWidget.removeRow(i)
         self.statusbar.showMessage("表格数据更新完成！")
 
+    def showTableMenu(self):
+        self.table_menu = MyMenu()
+        if self.tableWidget.selectedItems():
+            self.table_menu.delete.setEnabled(True)
+        else:
+            self.table_menu.delete.setEnabled(False)
 
+        self.table_menu.delete.triggered.connect(lambda: self.changeTableData(False))
+        self.table_menu.newPoint.triggered.connect(lambda: self.changeTableData(True))
+
+        self.table_menu.exec_(QCursor.pos())
+
+    def changeTableData(self, flag):
+        index = set()
+        if not self.tableWidget.selectedItems():
+            index.add(self.tableWidget.rowCount() - 1)
+        else:
+            for item in self.tableWidget.selectedItems():
+                index.add(item.row())
+        index = list(index)
+        if flag:
+            self.updateTable(1, data=[0, 0], index=index[0]+1, rows=list(index))
+        else:
+            self.updateTable(-1, rows=list(index))
 
 
 

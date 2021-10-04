@@ -68,14 +68,14 @@ class DrawLines:
         return self.figure
 
     def draw(self, x, y):
-        print("======================")
+        # print("======================")
         # print(self.dataLength)
         # print(self.x, self.y)
         # print(x, y)
         # 线性插值
         # 贝塞尔插值
         self.bezier_x, self.bezier_y = self.bezierFunc(x, y)
-        print("---------插值完成-------------")
+        # print("---------插值完成-------------")
         self.x, self.y = x, y
         self.dataLength = len(self.x)
         self.color_list = ['r'] * self.dataLength
@@ -103,7 +103,7 @@ class DrawLines:
         # 数据点连成的线
         self.linePart =  self.ax1.plot(self.x, self.y, ls='-', color='g', label="Curve 1")
         self.scatterPart = self.ax1.scatter(self.x, self.y, marker='.', s=60, color=self.color_list)
-        print(self.scatterPart)
+        # print(self.scatterPart)
         # 目标的插值曲线
         self.bezierCurve = self.ax1.plot(self.bezier_x, self.bezier_y, "c-", label="Curve 2")
         # print("------------------除算法外共花费时间--------------------")
@@ -128,12 +128,12 @@ class DrawLines:
 
     # 获取系数矩阵
     def getCoefficient(self, n):
-        print("1")
+        # print("1")
         if n in self.coefficientDict:
             coefficient = self.coefficientDict[n]
-            print("2")
+            # print("2")
         else:
-            print("3")
+            # print("3")
             coefficient = np.zeros(n + 1, np.int32)
             for i in range(n + 1):
                 # 计算系数矩阵
@@ -143,7 +143,7 @@ class DrawLines:
 
     # 贝塞尔插值算法
     def bezierFunc(self, x, y):
-        print("-----------开始插值---------------")
+        # print("-----------开始插值---------------")
         # start = time.time()
 
 
@@ -175,7 +175,7 @@ class DrawLines:
         # 如果点个数与上一次相同不重复计算 S*T矩阵
         if n != self.dataLength - 1:
             self.coefficient = self.getCoefficient(n)
-            print("-----------获取系数矩阵---------------")
+            # print("-----------获取系数矩阵---------------")
 
             S = np.zeros((n+1, self.pos_num), dtype=np.float32)
             T = np.zeros((n+1, self.pos_num), dtype=np.float32)
@@ -184,7 +184,7 @@ class DrawLines:
                 S[i, :] = np.power((1-self.t_array), n-i)
                 T[i, :] = np.power(self.t_array, i)
             self.st = S * T
-            print("-----------新建完成---------------")
+            # print("-----------新建完成---------------")
         # print('-=-=')
         # print("S shape is, T shape is ， st shape is {}".format(self.st.shape))
         P_x = np.tile(x, (self.pos_num, 1)).T
