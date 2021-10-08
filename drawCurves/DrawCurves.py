@@ -111,20 +111,20 @@ class DrawLines:
         self.figure.legend()
         self.canvas.draw()
 
-
     def updateScatter(self, selectedFlagList=[]):
         self.dataLength = len(selectedFlagList)
         self.color_list = ['r'] * self.dataLength
+        print("----------color_list-----------", self.color_list)
         for i in range(self.dataLength):
             if selectedFlagList[i]:
                 self.color_list[i] = 'b'
         try:
-            self.scatterPart.remove()
+            if self.scatterPart:
+                self.scatterPart.remove()
             self.scatterPart = self.ax1.scatter(self.x, self.y, marker='.', s=60, color=self.color_list)
             # del self.scatterPart
         except Exception as ex:
             print(ex)
-
 
     # 获取系数矩阵
     def getCoefficient(self, n):

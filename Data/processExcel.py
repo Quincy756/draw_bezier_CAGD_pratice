@@ -87,7 +87,8 @@ class processData:
         if file_path:
             if file_name == "Excel Files (*.xlsx)":
                 # 调用main.py 中的获取表格数据点函数
-                self.updateFunc[1]()
+                self.data = self.updateFunc[1]()
+
                 # print("---------------")
                 # print(self.data)
                 self.excel.saveData(file_path)
