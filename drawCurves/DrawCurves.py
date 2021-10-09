@@ -3,7 +3,7 @@ import time
 import matplotlib.pyplot as plt
 import numpy as np
 from itertools import combinations
-from PyQt5.QtCore import pyqtSignal
+from PyQt5.QtCore import pyqtSignal, QObject
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 import matplotlib as mpl
 # 计算排列组合数
@@ -32,11 +32,34 @@ class MyFigureCanvas(FigureCanvas):
 
 
 # 自定义画图逻辑及样式
-class DrawLines:
+class DrawLines(QObject):
+
+    updatePlotArgs = pyqtSignal(dict)
+
     def __init__(self):
+        super(QObject, self).__init__()
         self.x = []
         self.y = []
         self.ax1 = None
+        self.linePart = None
+        self.scatterPart = None
+        self.bezierCurve = None
+
+        self.plotArgsDict = {"legend": {}, # 设置图例位置
+                             "axes1": {},
+                             }
+        self.plotArgsDict["legend"] = {"isVisible": True,  # 设置是否可见
+                                       "pos": (0.9, 0.9), # 设置相对位置
+                                        }
+
+        self.plotArgsDict["axes1"] = {"line1": {},
+                                     "curve1": {},
+                                     "scatter1": {}}
+
+        self.plotArgsDict["line"] = {"label": "line1",
+                                     "color": 'r',
+                                     "ls": '-',
+        }
 
         self.dataLength = 0
         self.figure = plt.figure(frameon=True, num="10")
@@ -67,6 +90,13 @@ class DrawLines:
     def getFigure(self):
         return self.figure
 
+    def setPlotArgs(self, **kwargs):
+        self.plotArgsDict = dict(self.plotArgsDict, **kwargs)
+
+
+    def getPlotArgs(self):
+        return self.plotArgsDict
+
     def draw(self, x, y):
         # print("======================")
         # print(self.dataLength)
@@ -83,7 +113,6 @@ class DrawLines:
         min_x, max_x = min(self.x), max(self.x)
         min_y, max_y = min(self.y), max(self.y)
 
-        start = time.time()
         # 新建区域ax1
         # figure的百分比,从figure 10%的位置开始绘制, 宽高是figure的80%
         left, bottom, width, height = 0.05, 0.05, 0.94, 0.94
@@ -100,16 +129,53 @@ class DrawLines:
         self.ax1.set_yticks(np.arange(min_x-10, max_x+10, 5))
         self.ax1.set_ylim([min_y-10, max_y+10])
         self.ax1.set_title('area1')
+
         # 数据点连成的线
         self.linePart =  self.ax1.plot(self.x, self.y, ls='-', color='g', label="Curve 1")
         self.scatterPart = self.ax1.scatter(self.x, self.y, marker='.', s=60, color=self.color_list)
         # print(self.scatterPart)
         # 目标的插值曲线
         self.bezierCurve = self.ax1.plot(self.bezier_x, self.bezier_y, "c-", label="Curve 2")
+
         # print("------------------除算法外共花费时间--------------------")
         # print(time.time() - start)
-        self.figure.legend()
+        self.figure.legend(loc=self.plotArgsDict["legendPos"])
         self.canvas.draw()
+
+    def updateCanvas(self, x, y):
+        self.x, self.y = x, y
+        min_x, max_x = min(self.x), max(self.x)
+        min_y, max_y = min(self.y), max(self.y)
+
+        self.ax1.set_xticks(np.arange(min_x - 10, max_x + 10, 5))
+        self.ax1.set_xlim([min_x - 10, max_x + 10])
+        self.ax1.set_yticks(np.arange(min_x - 10, max_x + 10, 5))
+        self.ax1.set_ylim([min_y - 10, max_y + 10])
+        self.updateLinePart(self.x, self.y)
+        self.updateBezierCurve(self.x, self.y)
+        selectedFlagList = ['r'] * len(self.x)
+        self.updateScatter(selectedFlagList)
+        self.canvas.draw()
+
+
+
+    def updateLinePart(self, x, y):
+        self.x, self.y = x, y
+        if self.linePart:
+            for i, line in enumerate(self.linePart):
+                self.linePart.pop(i)
+                line.remove()
+        self.linePart = self.ax1.plot(self.x, self.y, ls='-', color='g', label="Curve 1")
+
+
+    def updateBezierCurve(self, x, y):
+        self.bezier_x, self.bezier_y = self.bezierFunc(x, y)
+        if self.bezierCurve:
+            for i, line in enumerate(self.bezierCurve):
+                self.bezierCurve.pop(i)
+                line.remove()
+        self.bezierCurve = self.ax1.plot(self.bezier_x, self.bezier_y, "c-", label="Curve 2")
+
 
     def updateScatter(self, selectedFlagList=[]):
         self.dataLength = len(selectedFlagList)

@@ -22,6 +22,11 @@ def getIcon(path):
     return QIcon(file_fit_pixmap)
 
 
+class SettingDialog(QDialog):
+    def __init__(self):
+        QDialog.__init__(self)
+        pass
+
 class MyTab():
     def __init__(self):
         # self.data = [[1, 2, 6, 20, 30], [2, 20, 32, 35, 40]]
@@ -131,9 +136,9 @@ class CanvasContainer(QWidget):
     tableUpdateSignal = pyqtSignal(dict)
     keyPressSignal = pyqtSignal(int)
     keyMoveSignal = pyqtSignal(dict)
+    doubleClicked = pyqtSignal(bool)
     # 选择点时状态改变
     selectedChanged = pyqtSignal(dict)
-
 
     def __init__(self):
         super(QWidget, self).__init__()
@@ -143,8 +148,6 @@ class CanvasContainer(QWidget):
         # self.x, self.y = [1, 2, 6, 20, 30], [2, 20, 32, 35, 40]
         # self.data = [self.x, self.y]
         self.x, self.y = self.data
-        # 记录鼠标在画布中的位置
-        self.pos_x, self.pos_y = 0, 0
         self.dataLength = len(self.data[0])
 
         self.keyPressFlag = False
@@ -152,6 +155,8 @@ class CanvasContainer(QWidget):
         self.showPosFlag = False
         self.selectedPoints = []
         self.selectedPoint = ()
+        # 画图的字典
+        self.plotArgs = {}
         # -1表示未选择，0表示放在上面未选中，-1表示选中了点
         self.selectState = -1
 
@@ -171,6 +176,11 @@ class CanvasContainer(QWidget):
         self.canvas.mpl_connect("button_press_event", self.keyPress)  # 鼠标按下触发事件
         self.canvas.mpl_connect("button_release_event", self.keyRelease)  # 鼠标释放触发事件
 
+        self.draw_lines.updatePlotArgs[dict].connect(self.setPlotArgs)
+
+    def setPlotArgs(self, kwargs):
+        self.plotArgs = kwargs
+
     # 设置右键要执行的函数
     def setContextMenuFunc(self, func):
         self.contextMenuFunc = func
@@ -189,8 +199,15 @@ class CanvasContainer(QWidget):
         try:
             # 如果是左键按下
             if event.button == 1:
+                if event.dblclick:
+                    print(event)
+                    # 状态为0
+                    if self.selectState == 0:
+                        self.doubleClicked.emit(True)
+                    else:
+                        self.doubleClicked.emit(False)
                 # 不是双击左键
-                if not event.dblclick:
+                else:
                     self.keyPressFlag = True
                     # 如果鼠标放在点上面了
                     if self.selectState == 0:
@@ -214,6 +231,7 @@ class CanvasContainer(QWidget):
                     self.selectedChanged.emit({"state": self.selectState, "points": self.selectedPoints})
                     # print("---------selectedFlagList------------", self.selectedFlagList)
                     self.updatePointColor()
+
         except Exception as ex:
             print("keyPressError: ", ex)
 
@@ -231,25 +249,30 @@ class CanvasContainer(QWidget):
             elif self.selectState == 0:
                 pass
 
+    # 判断鼠标是否进入legend区域
+    def enterLegend(self):
+        pass
+
     # 移动鼠标时改变状态栏信息，拖拽曲线
     def keyMove(self, event):
         try:
-            self.pos_x, self.pos_y = event.xdata, event.ydata
+            x_data, y_data = event.xdata, event.ydata
             # 如果鼠标在画图区域内
-            if self.pos_x and self.pos_y:
+            if x_data and y_data:
+
                 dict = {"point_data": (event.xdata, event.ydata)}
                 # 如果按钮按下且处于拖拽状态，直接画出线段
                 if self.keyPressFlag and self.dragPicFlag:
-                    self.data[0][self.currentIndex], self.data[1][self.currentIndex] = round(self.pos_x, 1), round(
-                        self.pos_y, 1)
-                    self.draw_lines.draw(*self.data)
+                    self.data[0][self.currentIndex], self.data[1][self.currentIndex] = round(x_data, 1), round(
+                        y_data, 1)
+                    self.draw_lines.updateCanvas(*self.data)
                     self.selectedPoints = []
                     self.selectedChanged.emit({"state": -1, "points": self.selectedPoints})
                 else:
                     # 如果已停止拖拽，鼠标移到点集附近时自动选中该点
                     index = 0
                     for x, y in zip(self.draw_lines.x, self.draw_lines.y):
-                        if self.getPointDistance((x, y), (self.pos_x, self.pos_y)) < 0.5:
+                        if self.getPointDistance((x, y), (x_data, y_data)) < 0.5:
                             # 选取
                             self.selectState = 0
                             self.setCursor(Qt.CrossCursor)
@@ -280,6 +303,10 @@ class CanvasContainer(QWidget):
             self.selectedChanged.emit({"state": self.selectState, "points": self.selectedPoints})
         except Exception as ex:
             print("移动鼠标时发生错误: ", ex)
+
+    def updateLegend(self):
+        pass
+
 
     def getPointDistance(self, p1, p2):
         dis = 0
@@ -498,6 +525,7 @@ class Ui_MyWindow(Ui_MainWindow):
         self.currentCanvasWidget.selectedChanged[dict].connect(self.updateSelectState)
         self.currentCanvasWidget.setContextMenuFunc(self.showContextMenu)
         self.checkBox_2.stateChanged[int].connect(self.showMaskPoint)
+        self.currentCanvasWidget.doubleClicked[bool].connect(self.isShowInput)
 
         self.data = self.currentCanvasWidget.getData()
         print("转换tab的data", self.data)
@@ -505,10 +533,15 @@ class Ui_MyWindow(Ui_MainWindow):
         self.process_data.setFig(self.currentCanvasWidget.getFigure())
         self.currentCanvasWidget.showCanvas()
 
+    def isShowInput(self, flag):
+        if flag:
+            self.showPosInput(0)
+        else:
+            self.showPosInput(1)
+
     def showMaskPoint(self, state):
         flag = True if state == 2 else False
         self.currentCanvasWidget.showMaskPoint(flag)
-
 
     def updateData(self, data):
         self.data = data
@@ -743,6 +776,7 @@ class Ui_MyWindow(Ui_MainWindow):
         self.currentCanvasWidget.tableUpdateSignal[dict].disconnect(self.updateMyTable)
         self.currentCanvasWidget.selectedChanged[dict].disconnect(self.updateSelectState)
         self.checkBox_2.stateChanged[int].disconnect(self.showMaskPoint)
+        self.currentCanvasWidget.doubleClicked[bool].disconnect(self.isShowInput)
 
 
         self.currentCanvasWidget = canvasWidget
@@ -762,8 +796,9 @@ class Ui_MyWindow(Ui_MainWindow):
             self.currentCanvasWidget.tableUpdateSignal[dict].disconnect(self.updateMyTable)
             self.currentCanvasWidget.selectedChanged[dict].disconnect(self.updateSelectState)
             self.checkBox_2.stateChanged[int].disconnect(self.showMaskPoint)
-            self.currentCanvasWidget = self.canvasWidgetList[index]
+            self.currentCanvasWidget.doubleClicked[bool].disconnect(self.isShowInput)
 
+            self.currentCanvasWidget = self.canvasWidgetList[index]
             self.setCanvasWidget()
         self.autoSwitchFlag = False
 
