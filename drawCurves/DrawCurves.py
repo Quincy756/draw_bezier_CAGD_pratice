@@ -45,22 +45,26 @@ class DrawLines(QObject):
         self.scatterPart = None
         self.bezierCurve = None
 
-        self.plotArgsDict = {"legend": {}, # 设置图例位置
-                             "axes1": {},
-                             }
-        self.plotArgsDict["legend"] = {"isVisible": True,  # 设置是否可见
-                                       "pos": (0.9, 0.9), # 设置相对位置
-                                        }
-
-        self.plotArgsDict["axes1"] = {"line1": {},
-                                     "curve1": {},
-                                     "scatter1": {}}
-
-        self.plotArgsDict["line"] = {"label": "line1",
-                                     "color": 'r',
-                                     "ls": '-',
-        }
-
+        self.plotArgsDict = {}
+        # self.plotArgsDict["legend"] = {"isVisible": True,  # 设置是否可见
+        #                                "pos": (0.9, 0.9), # 设置相对位置
+        #                                 }
+        #
+        # self.plotArgsDict["axes1"] = {
+        #                             "line1": {},
+        #                              "curve1": {},
+        #                              "scatter1": {},
+        #                               "lim": [], # x, y 轴的最大最小值
+        #                               "tick": [[],[]], # x, y 轴的刻度
+        #                               "title": (), # x, y 轴的标题
+        #                               "auto_scaled": True# 自动缩放刻度
+        #                                }
+        #
+        # self.plotArgsDict["line1"] = {"label": "line1",
+        #                              "color": 'r',
+        #                              "ls": '-',
+        # }
+        self.legend = None
         self.dataLength = 0
         self.figure = plt.figure(frameon=True, num="10")
         # 几个QWidgets
@@ -90,28 +94,23 @@ class DrawLines(QObject):
     def getFigure(self):
         return self.figure
 
-    def setPlotArgs(self, **kwargs):
+    def setPlotArgs(self, kwargs={}):
         self.plotArgsDict = dict(self.plotArgsDict, **kwargs)
-
 
     def getPlotArgs(self):
         return self.plotArgsDict
 
     def draw(self, x, y):
         # print("======================")
-        # print(self.dataLength)
-        # print(self.x, self.y)
-        # print(x, y)
         # 线性插值
         # 贝塞尔插值
         self.bezier_x, self.bezier_y = self.bezierFunc(x, y)
         # print("---------插值完成-------------")
         self.x, self.y = x, y
+
+        self.setPlotArgs()
         self.dataLength = len(self.x)
         self.color_list = ['r'] * self.dataLength
-
-        min_x, max_x = min(self.x), max(self.x)
-        min_y, max_y = min(self.y), max(self.y)
 
         # 新建区域ax1
         # figure的百分比,从figure 10%的位置开始绘制, 宽高是figure的80%
@@ -124,10 +123,12 @@ class DrawLines(QObject):
         # 获得绘制的句柄
         self.ax1 = self.figure.add_axes([left, bottom, width, height])
         # self.ax1.set_axis_off()
-        self.ax1.set_xticks(np.arange(min_x-10, max_x+10, 5))
-        self.ax1.set_xlim([min_x-10, max_x+10])
-        self.ax1.set_yticks(np.arange(min_x-10, max_x+10, 5))
-        self.ax1.set_ylim([min_y-10, max_y+10])
+
+        ax = self.plotArgsDict["axes1"]
+        self.ax1.set_xticks(ax["tick"][0])
+        self.ax1.set_xlim(ax["lim"][0])
+        self.ax1.set_yticks(ax["tick"][1])
+        self.ax1.set_ylim(ax["lim"][1])
         self.ax1.set_title('area1')
 
         # 数据点连成的线
@@ -139,25 +140,28 @@ class DrawLines(QObject):
 
         # print("------------------除算法外共花费时间--------------------")
         # print(time.time() - start)
-        self.figure.legend(loc=self.plotArgsDict["legendPos"])
+        self.legend = self.ax1.legend(loc=self.plotArgsDict["axes1"]["legend"]["loc"])
         self.canvas.draw()
 
     def updateCanvas(self, x, y):
         self.x, self.y = x, y
-        min_x, max_x = min(self.x), max(self.x)
-        min_y, max_y = min(self.y), max(self.y)
+        # self.setPlotArgs()
+        ax = self.plotArgsDict["axes1"]
+        self.ax1.set_xticks(ax["tick"][0])
+        self.ax1.set_xlim(ax["lim"][0])
+        self.ax1.set_yticks(ax["tick"][1])
+        self.ax1.set_ylim(ax["lim"][1])
 
-        self.ax1.set_xticks(np.arange(min_x - 10, max_x + 10, 5))
-        self.ax1.set_xlim([min_x - 10, max_x + 10])
-        self.ax1.set_yticks(np.arange(min_x - 10, max_x + 10, 5))
-        self.ax1.set_ylim([min_y - 10, max_y + 10])
         self.updateLinePart(self.x, self.y)
         self.updateBezierCurve(self.x, self.y)
-        selectedFlagList = ['r'] * len(self.x)
+        selectedFlagList = [False] * len(self.x)
         self.updateScatter(selectedFlagList)
         self.canvas.draw()
 
-
+    def updateLegend(self):
+        if self.legend:
+            self.legend.remove()
+        self.ax1.legend(loc=self.plotArgsDict["axes1"]["legend"]["loc"])
 
     def updateLinePart(self, x, y):
         self.x, self.y = x, y
@@ -180,7 +184,7 @@ class DrawLines(QObject):
     def updateScatter(self, selectedFlagList=[]):
         self.dataLength = len(selectedFlagList)
         self.color_list = ['r'] * self.dataLength
-        print("----------color_list-----------", self.color_list)
+        # print("----------color_list-----------", self.color_list)
         for i in range(self.dataLength):
             if selectedFlagList[i]:
                 self.color_list[i] = 'b'
@@ -194,12 +198,9 @@ class DrawLines(QObject):
 
     # 获取系数矩阵
     def getCoefficient(self, n):
-        # print("1")
         if n in self.coefficientDict:
             coefficient = self.coefficientDict[n]
-            # print("2")
         else:
-            # print("3")
             coefficient = np.zeros(n + 1, np.int32)
             for i in range(n + 1):
                 # 计算系数矩阵

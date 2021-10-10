@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import sys
 from GUI.mainWindow import Ui_MainWindow
+from GUI.settings import Ui_Dialog
 from drawCurves.DrawCurves import *
 from Data.processExcel import *
 from PyQt5.QtCore import Qt, QPoint
@@ -22,10 +23,66 @@ def getIcon(path):
     return QIcon(file_fit_pixmap)
 
 
-class SettingDialog(QDialog):
+class SetMyDialog:
     def __init__(self):
-        QDialog.__init__(self)
+        self.dialog = QDialog()
+        self.setupUi()
+        self.settingsDict = {"point": {},
+                             "line": {},
+                             "axes": {}}
+
+        self.pointDict = self.settingsDict["point"]
+        self.pointDict = { "color": (255, 0, 0, 255)
+
+                         }
+
+        self.lineDict = { "color": (0, 255, 0, 255)
+
+                        }
+
+
+
+
+    def setupUi(self):
+        self.ui = Ui_Dialog()
+        self.ui.setupUi(self.dialog)
+        self.dialog.setWindowModality(Qt.ApplicationModal)
+
+        self.ui.set_lineColor_btn.clicked.connect(lambda: self.selectColor(self.ui.set_lineColor_btn, "line"))
+        self.ui.set_pointColor_btn.clicked.connect(lambda: self.selectColor(self.ui.set_pointColor_btn, "point"))
+
+
+    def getSettings(self):
         pass
+        return self.settingsDict
+
+
+    def selectColor(self, label, name):
+        color = QColorDialog.getColor(Qt.blue, self.dialog, "选择"+name+ "颜色")
+        rgba_color = color.getRgb()
+        # r, g, b, a = color.getRgb()
+        if color.isValid():
+            # 双重大括号表示转义
+            label.setStyleSheet('''QPushButton {{ background-color: rgba({0}, {1}, {2}, {3}); }}'''.format(*rgba_color))
+            self.settingsDict[name]["color"] = rgba_color
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 class MyTab():
     def __init__(self):
@@ -132,6 +189,7 @@ class CanvasWidget(QWidget):
 # 包含canvas的控件
 class CanvasContainer(QWidget):
 
+    updatePlotArgs = pyqtSignal(dict)
     dataChangedSignal = pyqtSignal(list)
     tableUpdateSignal = pyqtSignal(dict)
     keyPressSignal = pyqtSignal(int)
@@ -147,11 +205,36 @@ class CanvasContainer(QWidget):
         # self.data = [[0], [0]]
         # self.x, self.y = [1, 2, 6, 20, 30], [2, 20, 32, 35, 40]
         # self.data = [self.x, self.y]
+        self.plotArgsDict = {  # 设置图例位置
+                            "axes1": {}
+                            }
+
+        self.plotArgsDict["axes1"] = {
+            "legend": {},
+            "line1": {},
+            "curve1": {},
+            "scatter1": {},
+            "lim": [],  # x, y 轴的最大最小值
+            "tick": [[], []],  # x, y 轴的刻度
+            "title": (),  # x, y 轴的标题
+            "auto_scaled": True  # 自动缩放刻度
+        }
+        self.plotArgsDict["axes1"]["legend"] = {"isVisible": True,  # 设置是否可见
+                                                "loc": (0.9, 0.9),  # 设置相对位置
+                                                "pos": (0.9, 0.9),  # 设置绝对位置
+                                                }
+
+        self.plotArgsDict["axes1"]["line1"] = {"label": "line1",
+                                              "color": 'r',
+                                              "ls": '-',
+                                              }
+
         self.x, self.y = self.data
         self.dataLength = len(self.data[0])
 
         self.keyPressFlag = False
         self.dragPicFlag = False
+        self.dragLegendFlag = False
         self.showPosFlag = False
         self.selectedPoints = []
         self.selectedPoint = ()
@@ -177,9 +260,33 @@ class CanvasContainer(QWidget):
         self.canvas.mpl_connect("button_release_event", self.keyRelease)  # 鼠标释放触发事件
 
         self.draw_lines.updatePlotArgs[dict].connect(self.setPlotArgs)
+        self.updatePlotArgs[dict].connect(self.draw_lines.setPlotArgs)
 
-    def setPlotArgs(self, kwargs):
-        self.plotArgs = kwargs
+    def setPlotArgs(self, kwargs={}):
+        self.plotArgsDict = dict(self.plotArgsDict, **kwargs)
+        ax = self.plotArgsDict["axes1"]
+        if ax["auto_scaled"]:
+            if len(self.data[0]) > 1:
+                # print("-------------->2-----------")
+                min_x, max_x = min(self.data[0]), max(self.data[0])
+                min_y, max_y = min(self.data[1]), max(self.data[1])
+                x_diff = max_x - min_x
+                y_diff = max_y - min_y
+                x_lim = (min_x - 0.1 * x_diff, max_x + 0.1 * x_diff)
+                y_lim = (min_y - 0.1 * y_diff, max_y + 0.1 * y_diff)
+
+            elif len(self.data[0]) == 1 and self.data[0][0] != 0:
+                x_lim = (self.data[0][0] - 0.1 * abs(self.data[0][0]), self.data[0][0] + 0.1 * abs(self.data[0][0]))
+                y_lim = (self.data[1][0] - 0.1 * abs(self.data[1][0]), self.data[1][0] + 0.1 * abs(self.data[1][0]))
+
+            else:
+                x_lim = (-10, 10)
+                y_lim = (-10, 10)
+            # print(x_lim, y_lim)
+            ax["lim"] = [x_lim, y_lim]
+            ax["tick"] = [np.arange(x_lim[0], x_lim[1] + 0.1 * (x_lim[1] - x_lim[0]), 0.1 * (x_lim[1] - x_lim[0])), \
+                          np.arange(y_lim[0], y_lim[1] + 0.1 * (y_lim[1] - y_lim[0]), 0.1 * (y_lim[1] - y_lim[0]))]
+            self.updatePlotArgs.emit(self.plotArgsDict)
 
     # 设置右键要执行的函数
     def setContextMenuFunc(self, func):
@@ -189,9 +296,10 @@ class CanvasContainer(QWidget):
         self.contextMenuFunc(event.globalPos())
 
     def showCanvas(self, data=None):
-        data = data if data else self.data
+        self.data = data if data else self.data
         # print("--------------data------------", data)
-        self.draw_lines.draw(*data)
+        self.setPlotArgs()
+        self.draw_lines.draw(*self.data)
         self.canvas.draw()
 
     def keyPress(self, event):
@@ -220,9 +328,12 @@ class CanvasContainer(QWidget):
                         else:
                             self.selectedPoints.append(self.selectedPoint)
 
+                    elif self.selectState == 2:
+                        pass
+
                     elif self.selectedPoint:
                         self.selectState = -1
-                        print("在别的区域选择")
+                        # print("在别的区域选择")
                         self.selectedPoints = []
                         self.selectedFlagList = [False] * len(self.data[0])
                     else:
@@ -245,13 +356,48 @@ class CanvasContainer(QWidget):
             if self.dragPicFlag:
                 self.dragPicFlag = False
                 self.dataChangedSignal.emit(self.data)
+            elif self.dragLegendFlag:
+                self.dragLegendFlag = False
 
             elif self.selectState == 0:
                 pass
 
+    # 图例的绝对坐标和相对坐标之间的换算
+    def getLegendPos(self, flag, pos=()):
+        res = ()
+        x_lim, y_lim = self.plotArgsDict["axes1"]["lim"]
+        legend = self.plotArgsDict["axes1"]["legend"]
+        if flag:
+            loc = legend["loc"]
+            # 计算legend的绝对尺寸
+            x_legend = x_lim[0] + (x_lim[1] - x_lim[0]) * loc[0]
+            y_legend = y_lim[0] + (y_lim[1] - y_lim[0]) * loc[1]
+            res = (x_legend, y_legend)
+        else:
+            x_loc = (pos[0] - x_lim[0]) / (x_lim[1] - x_lim[0])
+            y_loc = (pos[1] - y_lim[0]) / (y_lim[1] - y_lim[0])
+            res = (x_loc-0.05, y_loc-0.05)
+            legend["loc"] = res
+            self.setPlotArgs()
+            # print(self.plotArgsDict)
+        return res
+
+
     # 判断鼠标是否进入legend区域
-    def enterLegend(self):
-        pass
+    def enterLegend(self, pos):
+        legend = self.plotArgsDict["axes1"]["legend"]
+        x_legend, y_legend = self.getLegendPos(True)
+        # print(x_legend, y_legend)
+        if legend["isVisible"]:
+            if pos[0] > x_legend and pos[0] < x_legend + 0.3*abs(x_legend) and \
+                            pos[1] > y_legend and pos[1] < y_legend + 0.3*abs(y_legend):
+                self.setCursor(Qt.SizeAllCursor)
+                return True
+        return False
+
+
+        # print("----------pos: {}, x_lim: {}, y_lim: {} loc: {}".format(pos, x_lim, y_lim, loc))
+
 
     # 移动鼠标时改变状态栏信息，拖拽曲线
     def keyMove(self, event):
@@ -263,43 +409,88 @@ class CanvasContainer(QWidget):
                 dict = {"point_data": (event.xdata, event.ydata)}
                 # 如果按钮按下且处于拖拽状态，直接画出线段
                 if self.keyPressFlag and self.dragPicFlag:
-                    self.data[0][self.currentIndex], self.data[1][self.currentIndex] = round(x_data, 1), round(
-                        y_data, 1)
-                    self.draw_lines.updateCanvas(*self.data)
+                    self.data[0][self.currentIndex], self.data[1][self.currentIndex] = round(x_data, 3), round(y_data, 3)
+                    self.setPlotArgs()
                     self.selectedPoints = []
                     self.selectedChanged.emit({"state": -1, "points": self.selectedPoints})
+                    self.draw_lines.updateCanvas(*self.data)
                 else:
-                    # 如果已停止拖拽，鼠标移到点集附近时自动选中该点
-                    index = 0
-                    for x, y in zip(self.draw_lines.x, self.draw_lines.y):
-                        if self.getPointDistance((x, y), (x_data, y_data)) < 0.5:
-                            # 选取
-                            self.selectState = 0
-                            self.setCursor(Qt.CrossCursor)
-                            self.selectedPoint = (x, y)
-                            dict = {"point_data": self.selectedPoint}
-                            self.currentIndex = index
+                    self.selectState = -1
+                    self.setPlotArgs()
 
-                            if self.keyPressFlag:
-                                self.dragPicFlag = True
-                            else:
-                                self.dragPicFlag = False
-                            break
+                    if self.keyPressFlag and self.dragLegendFlag:
+                        # print("-----------drag legend--------")
+                        self.getLegendPos(False, (x_data, y_data))
+                        self.setCursor(Qt.SizeAllCursor)
+                        self.draw_lines.updateLegend()
+                        self.canvas.draw()
+
+                    # 如果放在legend上
+                    elif self.enterLegend((x_data, y_data)):
+                        # print("-----------drag legend2--------")
+                        self.selectState = 2
+                        if self.keyPressFlag:
+                            self.dragLegendFlag = True
+
+                    # 看是否放在上面
+                    elif len(self.data[0]) == 1:
+                        if self.data[0][0] == 0 and self.data[1][0] == 0:
+                            if self.getPointDistance((x_data, y_data), (0, 0)) < 0.05:
+                                self.selectState = 0
+                                self.selectedPoint = (0, 0)
+                                self.currentIndex = 0
                         else:
-                            # 未选中点时
-                            self.selectState = -1
-                            if self.dragPicFlag:
-                                self.setCursor(Qt.CrossCursor)
-                            else:
-                                self.setCursor(Qt.ArrowCursor)
-                        index += 1
-                self.keyMoveSignal.emit(dict)
+                            if abs(x_data-self.data[0]) <= abs(self.data[0][0])/100 or abs(y_data-self.data[1]) <= abs(self.data[1][0]/100):
+                                self.selectState = 0
+                                self.selectedPoint = (self.data[0], self.data[1])
+                                self.currentIndex = 0
+
+                    elif  len(self.data[0]) == 0:
+                        pass
+
+                    else:
+                        index = 0
+                        x_diff, y_diff = max(self.data[0])-min(self.data[0]), max(self.data[1])-min(self.data[1])
+                        for x, y in zip(self.data[0], self.data[1]):
+                            if abs(x_data - x) <= x_diff/100 and abs(y_data - y) <= y_diff/100:
+                                self.selectState = 0
+                                self.selectedPoint = (x, y)
+                                self.currentIndex = index
+                                break
+                            index += 1
+
+                    # 如果放在已有点上
+                    if self.selectState == 0:
+                        self.setCursor(Qt.CrossCursor)
+                        dict = {"point_data": self.selectedPoint}
+                        self.dragPicFlag = True if self.keyPressFlag else False
+
+                    elif self.selectState == 2:
+                        self.setCursor(Qt.SizeAllCursor)
+
+                    else:
+                        # 未选中点时
+                        self.selectState = -1
+                        if self.dragPicFlag:
+                            self.setCursor(Qt.CrossCursor)
+                        else:
+                            self.setCursor(Qt.ArrowCursor)
+
+                    self.keyMoveSignal.emit(dict)
+
                 if event.dblclick:
                     self.doubleClickFlag = True
             # 未移动到绘图区域时时
             else:
-                self.keyMoveSignal.emit({"point_data": ()})
-                self.selectState = -2
+                if self.keyPressFlag and self.dragPicFlag:
+                    self.keyPressFlag = False
+                    self.dragPicFlag = False
+                    self.dataChangedSignal.emit(self.data)
+                    self.setCursor(Qt.ArrowCursor)
+                else:
+                    self.keyMoveSignal.emit({"point_data": ()})
+                    self.selectState = -2
+
             self.selectedChanged.emit({"state": self.selectState, "points": self.selectedPoints})
         except Exception as ex:
             print("移动鼠标时发生错误: ", ex)
@@ -307,18 +498,11 @@ class CanvasContainer(QWidget):
     def updateLegend(self):
         pass
 
-
     def getPointDistance(self, p1, p2):
         dis = 0
         for i in range(len(p1)):
             dis += (p1[i]-p2[i])**2
         return dis**0.5
-
-    # def showCanvas(self):
-    #     self.dataChanged()
-    #     self.draw_lines.draw(self.x, self.y)
-    #     # 设置布局
-    #     self.canvas.draw()
 
     def showMaskPoint(self, flag):
         if not flag:
@@ -337,30 +521,33 @@ class CanvasContainer(QWidget):
 
     # 改变点或者新增点, flag为0表示编辑点，flag为+1表示增加点, -1 表示删除点
     def updatePointPos(self, flag, data=None):
-        print("新增点", data)
+        # print("新增点", data)
         if data:
             if flag == 0:
                 # 替换点坐标
                 self.data[0][self.currentIndex], self.data[1][self.currentIndex] = data
                 index = self.currentIndex
+                self.setPlotArgs()
                 self.tableUpdateSignal.emit({"flag": flag, "data": data, "index": index, "rows": None})
 
             elif flag == 1:
                 index = self.currentIndex + 1 if True in self.selectedFlagList else self.dataLength
+                self.currentIndex += 1
                 self.data[0].insert(index, data[0])
                 self.data[1].insert(index, data[1])
                 self.dataLength += 1
-                print("进入table的点", data, index)
+                self.setPlotArgs()
+                # print("进入table的点", data, index)
                 self.tableUpdateSignal.emit({"flag": flag, "data": data, "index": index, "rows": None})
-                print("-=-=-=-=")
+                # print("-=-=-=-=")
         elif flag == -1:
             # print("-----------delete---------------")
             index_list = [index for index in range(self.dataLength) if self.selectedFlagList[index]]
             x = [self.data[0][index] for index in range(self.dataLength) if index not in index_list]
             y = [self.data[1][index] for index in range(self.dataLength) if index not in index_list]
-            # self.selectedFlagList = [self.selectedFlagList[index] for index in range(self.dataLength) if
-            #                          index not in index_list]
+            self.currentIndex -= len(index_list)
             self.data = [x, y]
+            self.setPlotArgs()
             self.dataLength = len(self.data[0])
             # print("------------x--------------", x)
             self.tableUpdateSignal.emit({"flag": flag, "data": None, "index": None, "rows": index_list})
@@ -502,6 +689,15 @@ class Ui_MyWindow(Ui_MainWindow):
         self.process_data.getUpdateFunc([self.exportDataToTable, self.getTableData])
 
         self.checkBox_2.setCheckState(Qt.Checked)
+        self.action_3.triggered.connect(self.showSettings)
+
+    def showSettings(self):
+        print("===========")
+        self.setMyDialog = SetMyDialog()
+        self.settingsDialog =  self.setMyDialog.dialog
+        self.settingsDialog.show()
+
+
 
     def setCanvasWidget(self):
         # 鼠标所在位置的数据点
@@ -528,7 +724,6 @@ class Ui_MyWindow(Ui_MainWindow):
         self.currentCanvasWidget.doubleClicked[bool].connect(self.isShowInput)
 
         self.data = self.currentCanvasWidget.getData()
-        print("转换tab的data", self.data)
         self.exportDataToTable(self.data)
         self.process_data.setFig(self.currentCanvasWidget.getFigure())
         self.currentCanvasWidget.showCanvas()
@@ -573,11 +768,6 @@ class Ui_MyWindow(Ui_MainWindow):
         self.point_data = kwargs["point_data"]
         self.currentIndex = self.currentCanvasWidget.currentIndex
 
-    # def updateData(self, data):
-    #     self.data = data
-    #     # print(self.data, "------")
-    #     self.exportDataToTable(self.data)
-
     def getFunc(self, func, *args, **kwargs):
         self.myFunc = func
         self.dictArgs = kwargs
@@ -594,7 +784,7 @@ class Ui_MyWindow(Ui_MainWindow):
             self.posWidget.show()
             self.showPosFlag = True
             self.posWidget.setCloseFunc(self.closePosInput)
-            print("========show pos=========")
+            # print("========show pos=========")
             self.posWidget.okBtn.clicked.connect(lambda: self.updatePointPos(flag))
 
     # 展示右键菜单
@@ -637,7 +827,7 @@ class Ui_MyWindow(Ui_MainWindow):
 
     def checkTableInput(self, row, col):
         try:
-            print("新增行{} 列{}".format(row, col))
+            # print("新增行{} 列{}".format(row, col))
             # 如果是由表格的右键菜单引起的项目内容变化，不检查其值
             # print(self.tableWidget.item(row, col).text())
             if self.editItemFlag:
@@ -646,7 +836,7 @@ class Ui_MyWindow(Ui_MainWindow):
                 self.currentCanvasWidget.showCanvas(self.data)
             self.editItemFlag = False
         except Exception as ex:
-            print("这里有问题", ex)
+            # print("这里有问题", ex)
             response_btn = QMessageBox.warning(self.tableWidget, "输入错误", "请输入一个小数！", QMessageBox.Yes)
             self.tableWidget.item(row, col).setText(self.currentItemText)
 
@@ -657,7 +847,7 @@ class Ui_MyWindow(Ui_MainWindow):
             QMessageBox.information(self.window, "导入数据为空","数据为空", QMessageBox.Ok)
             return False
         rows, cols = len(data[0]), len(data)
-        print("导入数据时的大小", rows, cols)
+        # print("导入数据时的大小", rows, cols)
         self.tableWidget.setRowCount(rows)
         self.tableWidget.setColumnCount(cols)
         for row in range(rows):
@@ -704,14 +894,7 @@ class Ui_MyWindow(Ui_MainWindow):
 
         elif flag == 1:
             x, y = data
-            # self.tableWidget.setRowCount(self.tableWidget.rowCount()+1)
             self.tableWidget.insertRow(index)
-            # print(self.tableWidget.columnCount(), self.tableWidget.rowCount())
-            # self.tableWidget.item(index, 0).setText(str(x))
-            # self.tableWidget.item(index, 1).setText(str(x))
-            # self.tableWidget.item(index, 0).setTextAlignment(Qt.AlignCenter)
-            # self.tableWidget.item(index, 1).setTextAlignment(Qt.AlignCenter)
-
             x_item = QTableWidgetItem()
             y_item = QTableWidgetItem()
             x_item.setTextAlignment(Qt.AlignCenter)

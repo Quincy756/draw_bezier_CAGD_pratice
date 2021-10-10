@@ -209,7 +209,7 @@ class Ui_MainWindow(object):
         self.pushButton_4.setText(_translate("MainWindow", "保存"))
         self.pushButton_3.setText(_translate("MainWindow", "设置样式"))
         self.actionBes.setText(_translate("MainWindow", "Bézier 曲线"))
-        self.action_3.setText(_translate("MainWindow", "曲线样式"))
+        self.action_3.setText(_translate("MainWindow", "样式"))
         self.action_4.setText(_translate("MainWindow", "保存数据点到excel"))
         self.action_5.setText(_translate("MainWindow", "保存图像"))
         self.action_6.setText(_translate("MainWindow", "从excel导入数据点"))
