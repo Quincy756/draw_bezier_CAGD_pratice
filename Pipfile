@@ -10,6 +10,7 @@ pyqt5-tools = "*"
 matplotlib = "*"
 scipy = "*"
 openpyxl = "*"
+pyinstaller = "*"
 
 [dev-packages]
 
