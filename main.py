@@ -11,7 +11,7 @@ from GUI.settings import Ui_Dialog
 from drawCurves.DrawCurves import *
 from Data.processExcel import *
 from PyQt5.QtCore import Qt, QPoint
-from PyQt5.QtCore import pyqtSignal
+from PyQt5.QtCore import pyqtSignal, QObject
 import math
 import time
 import src
@@ -23,8 +23,13 @@ def getIcon(path):
     return QIcon(file_fit_pixmap)
 
 
-class SetMyDialog:
+class SetMyDialog(QObject):
+
+    changeSettingSignal = pyqtSignal(dict)
+
     def __init__(self):
+        super(QObject, self).__init__()
+
         self.dialog = QDialog()
         self.setupUi()
         self.settingsDict = {"point": {},
@@ -40,9 +45,6 @@ class SetMyDialog:
 
                         }
 
-
-
-
     def setupUi(self):
         self.ui = Ui_Dialog()
         self.ui.setupUi(self.dialog)
@@ -50,37 +52,26 @@ class SetMyDialog:
 
         self.ui.set_lineColor_btn.clicked.connect(lambda: self.selectColor(self.ui.set_lineColor_btn, "line"))
         self.ui.set_pointColor_btn.clicked.connect(lambda: self.selectColor(self.ui.set_pointColor_btn, "point"))
+        # self.ui.pushButton_7.clicked.connect(lambda: self.selectColor(self.ui.pushButton_7, "font"))
+        self.ui.pushButton.clicked.connect(lambda: self.changeSettings())
+        self.ui.pushButton_2.clicked.connect(lambda: self.dialog.close())
 
+    def changeSettings(self):
+        self.changeSettingSignal.emit(self.settingsDict)
+        self.dialog.close()
 
     def getSettings(self):
         pass
         return self.settingsDict
 
-
-    def selectColor(self, label, name):
+    def selectColor(self, btn, name):
         color = QColorDialog.getColor(Qt.blue, self.dialog, "选择"+name+ "颜色")
         rgba_color = color.getRgb()
         # r, g, b, a = color.getRgb()
         if color.isValid():
             # 双重大括号表示转义
-            label.setStyleSheet('''QPushButton {{ background-color: rgba({0}, {1}, {2}, {3}); }}'''.format(*rgba_color))
+            btn.setStyleSheet('''QPushButton {{ background-color: rgba({0}, {1}, {2}, {3}); }}'''.format(*rgba_color))
             self.settingsDict[name]["color"] = rgba_color
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -382,7 +373,6 @@ class CanvasContainer(QWidget):
             # print(self.plotArgsDict)
         return res
 
-
     # 判断鼠标是否进入legend区域
     def enterLegend(self, pos):
         legend = self.plotArgsDict["axes1"]["legend"]
@@ -397,7 +387,6 @@ class CanvasContainer(QWidget):
 
 
         # print("----------pos: {}, x_lim: {}, y_lim: {} loc: {}".format(pos, x_lim, y_lim, loc))
-
 
     # 移动鼠标时改变状态栏信息，拖拽曲线
     def keyMove(self, event):
@@ -651,7 +640,22 @@ class Ui_MyWindow(Ui_MainWindow):
         self.main_tabWidget = QTabWidget()
         self.main_tabWidget.setMouseTracking(True)
 
-        self.horizontalLayout.addWidget(self.main_tabWidget)
+        self.show_point_chk = QCheckBox("显示点")
+        self.show_point_chk.setCheckState(Qt.Checked)
+        self.show_point_chk.setMaximumWidth(140)
+
+        self.show_axes_chk = QCheckBox("显示坐标轴")
+        self.show_axes_chk.setCheckState(Qt.Checked)
+
+        self.figureSettingLayout = QHBoxLayout()
+        self.figureSettingLayout.addWidget(self.show_point_chk)
+        self.figureSettingLayout.addWidget(self.show_axes_chk)
+
+
+        self.verticalLayout_3.addWidget(self.main_tabWidget)
+        self.verticalLayout_3.addLayout(self.figureSettingLayout)
+
+
         self.dockWidget.setFeatures(QDockWidget.AllDockWidgetFeatures)
 
         self.window.setMouseTracking(True)
@@ -661,7 +665,7 @@ class Ui_MyWindow(Ui_MainWindow):
         self.tabAddBtn = QPushButton()
         self.tabAddBtn.setIcon(getIcon(":resources//MyIcon//plus-circle-fill.svg"))
         self.tabAddBtn.setFlat(False)
-        self.tabAddBtn.clicked.connect(self.addPage)
+        self.tabAddBtn.clicked.connect(lambda: self.addPage(False))
 
         self.main_tabWidget.setCornerWidget(self.tabAddBtn, Qt.TopLeftCorner)
         self.main_tabWidget.setTabsClosable(True)
@@ -681,15 +685,26 @@ class Ui_MyWindow(Ui_MainWindow):
         self.main_tabWidget.addTab(self.currentCanvasWidget, "tab0")
 
         self.process_data = processData()
-        self.setCanvasWidget()
+        self.setCanvasWidget(False)
 
         self.process_data.setData(self.data)
         self.action.triggered.connect(lambda: self.process_data.saveData())
         self.action_2.triggered.connect(lambda: self.process_data.exportData())
         self.process_data.getUpdateFunc([self.exportDataToTable, self.getTableData])
 
-        self.checkBox_2.setCheckState(Qt.Checked)
+        self.show_point_chk.setCheckState(Qt.Checked)
+        self.show_axes_chk.setCheckState(Qt.Checked)
+
         self.action_3.triggered.connect(self.showSettings)
+
+        self.process_data.exportDataSignal[list].connect(self.exportNewData)
+
+    def exportNewData(self, data):
+        self.statusbar.showMessage("表格数据导入中")
+        self.exportDataToTable(data)
+        self.statusbar.showMessage("表格数据导入完成！")
+        self.data = data
+        self.addPage(True)
 
     def showSettings(self):
         print("===========")
@@ -697,9 +712,7 @@ class Ui_MyWindow(Ui_MainWindow):
         self.settingsDialog =  self.setMyDialog.dialog
         self.settingsDialog.show()
 
-
-
-    def setCanvasWidget(self):
+    def setCanvasWidget(self, isDataImport):
         # 鼠标所在位置的数据点
         self.point_data = ()
         # 记录鼠标在状态栏中的位置
@@ -720,13 +733,21 @@ class Ui_MyWindow(Ui_MainWindow):
         self.currentCanvasWidget.tableUpdateSignal[dict].connect(self.updateMyTable)
         self.currentCanvasWidget.selectedChanged[dict].connect(self.updateSelectState)
         self.currentCanvasWidget.setContextMenuFunc(self.showContextMenu)
-        self.checkBox_2.stateChanged[int].connect(self.showMaskPoint)
+        self.show_point_chk.stateChanged[int].connect(self.showMaskPoint)
+        self.show_axes_chk.stateChanged[int].connect(self.showAxes)
         self.currentCanvasWidget.doubleClicked[bool].connect(self.isShowInput)
 
-        self.data = self.currentCanvasWidget.getData()
-        self.exportDataToTable(self.data)
+        if not isDataImport:
+            self.data = self.currentCanvasWidget.getData()
+            print(self.data)
+            self.exportDataToTable(self.data)
+
         self.process_data.setFig(self.currentCanvasWidget.getFigure())
-        self.currentCanvasWidget.showCanvas()
+        self.currentCanvasWidget.showCanvas(self.data)
+
+    def showAxes(self):
+        pass
+
 
     def isShowInput(self, flag):
         if flag:
@@ -820,6 +841,10 @@ class Ui_MyWindow(Ui_MainWindow):
             self.process_data.saveData()
         self.main_tabWidget.removeTab(self.main_tabWidget.currentIndex())
         self.canvasWidgetList.pop(self.main_tabWidget.currentIndex())
+        if self.main_tabWidget.currentIndex() == -1:
+            self.tableWidget.clearContents()
+            self.tableWidget.setVisible(False)
+            print(self.main_tabWidget.count())
 
     def setCurrentItem(self, row, col):
         self.editItemFlag = True
@@ -841,7 +866,7 @@ class Ui_MyWindow(Ui_MainWindow):
             self.tableWidget.item(row, col).setText(self.currentItemText)
 
     def exportDataToTable(self, data=[]):
-        self.statusbar.showMessage("表格数据导入中")
+        self.tableWidget.setVisible(True)
         # print(len(data))
         if len(data[0]) == 0:
             QMessageBox.information(self.window, "导入数据为空","数据为空", QMessageBox.Ok)
@@ -856,7 +881,6 @@ class Ui_MyWindow(Ui_MainWindow):
                 item.setText(str(data[col][row]))
                 item.setTextAlignment(Qt.AlignCenter)
                 self.tableWidget.setItem(row, col, item)
-        self.statusbar.showMessage("表格数据导入完成！")
         print("-----------export------------")
         self.tableWidget.cellDoubleClicked.connect(self.setCurrentItem)
         self.tableWidget.cellChanged.connect(self.checkTableInput)
@@ -946,7 +970,7 @@ class Ui_MyWindow(Ui_MainWindow):
     def createNewTab(self):
         pass
 
-    def addPage(self):
+    def addPage(self, flag):
         self.autoSwitchFlag = True
         canvasWidget = CanvasContainer()
         self.canvasWidgetList.append(canvasWidget)
@@ -958,13 +982,14 @@ class Ui_MyWindow(Ui_MainWindow):
         self.currentCanvasWidget.keyMoveSignal[dict].disconnect(self.updatePointData)
         self.currentCanvasWidget.tableUpdateSignal[dict].disconnect(self.updateMyTable)
         self.currentCanvasWidget.selectedChanged[dict].disconnect(self.updateSelectState)
-        self.checkBox_2.stateChanged[int].disconnect(self.showMaskPoint)
+        self.show_point_chk.stateChanged[int].disconnect(self.showMaskPoint)
+        self.show_axes_chk.stateChanged[int].disconnect(self.showAxes)
         self.currentCanvasWidget.doubleClicked[bool].disconnect(self.isShowInput)
 
 
         self.currentCanvasWidget = canvasWidget
         self.currentCanvasWidget.getFigure().clf()
-        self.setCanvasWidget()
+        self.setCanvasWidget(flag)
         # 新建时设置自动切换到该
 
     def setCurrentTab(self, index):
@@ -978,11 +1003,12 @@ class Ui_MyWindow(Ui_MainWindow):
             self.currentCanvasWidget.keyMoveSignal[dict].disconnect(self.updatePointData)
             self.currentCanvasWidget.tableUpdateSignal[dict].disconnect(self.updateMyTable)
             self.currentCanvasWidget.selectedChanged[dict].disconnect(self.updateSelectState)
-            self.checkBox_2.stateChanged[int].disconnect(self.showMaskPoint)
+            self.show_point_chk.stateChanged[int].disconnect(self.showMaskPoint)
+            self.show_axes_chk.stateChanged[int].disconnect(self.showAxes)
             self.currentCanvasWidget.doubleClicked[bool].disconnect(self.isShowInput)
 
             self.currentCanvasWidget = self.canvasWidgetList[index]
-            self.setCanvasWidget()
+            self.setCanvasWidget(False)
         self.autoSwitchFlag = False
 
 

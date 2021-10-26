@@ -1,5 +1,6 @@
 import matplotlib.pyplot as plt
 from PyQt5.QtWidgets import  *
+from PyQt5.QtCore import QObject, pyqtSignal
 import openpyxl
 import os
 
@@ -35,7 +36,6 @@ class ExcelHandle:
         except Exception as ex:
             self.data = []
 
-
     def saveData(self, file_path, sheetName="Sheet1"):
 
         self.getWorkbook(file_path, sheetName)
@@ -70,11 +70,16 @@ class ExcelHandle:
         return data
 
 
-class processData:
+class processData(QObject):
+
+    exportDataSignal = pyqtSignal(list)
+
+
     def __init__(self, data=None):
         self.data = data
         # self.data = [[1, 2, 3], [4, 6, 8]]
         self.excel = ExcelHandle(self.data)
+        super(QObject, self).__init__()
 
     def saveData(self):
         # print("yes")
@@ -106,7 +111,6 @@ class processData:
         plt.savefig(file_path)
         plt.close()
 
-
     def setData(self, data):
         self.data = data
         self.excel.setData(data)
@@ -128,7 +132,9 @@ class processData:
         if file_path:
             if file_name == "Excel Files (*.xlsx)":
                 self.data = self.excel.exportData(file_path, "Sheet")
-                self.updateFunc[0](self.data)
+                self.exportDataSignal.emit(self.data)
+
+                # self.updateFunc[0](self.data)
 
             elif file_name == "Figure Files(*.fig)":
                 print("yes")

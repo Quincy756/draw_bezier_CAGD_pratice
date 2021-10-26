@@ -76,7 +76,7 @@ class DrawLines(QObject):
 
         # 设置插值点
         self.coefficient = []
-        self.t_array = np.arange(0, 1.01, 0.02)
+        self.t_array = np.arange(0, 1.001, 0.001)
         self.pos_num = len(self.t_array)
 
     def setDrawStyles(self):
