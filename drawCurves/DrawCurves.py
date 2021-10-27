@@ -46,24 +46,40 @@ class DrawLines(QObject):
         self.bezierCurve = None
 
         self.plotArgsDict = {}
-        # self.plotArgsDict["legend"] = {"isVisible": True,  # 设置是否可见
-        #                                "pos": (0.9, 0.9), # 设置相对位置
-        #                                 }
-        #
-        # self.plotArgsDict["axes1"] = {
-        #                             "line1": {},
-        #                              "curve1": {},
-        #                              "scatter1": {},
-        #                               "lim": [], # x, y 轴的最大最小值
-        #                               "tick": [[],[]], # x, y 轴的刻度
-        #                               "title": (), # x, y 轴的标题
-        #                               "auto_scaled": True# 自动缩放刻度
-        #                                }
-        #
-        # self.plotArgsDict["line1"] = {"label": "line1",
-        #                              "color": 'r',
-        #                              "ls": '-',
-        # }
+        self.settingsDict = {
+                             "point": {},
+                             "line": {},
+                             "bezier": {},
+                             "axes": {
+                                      "autoScale": True,
+                                      "title": "",
+                                      "x_min": 0,
+                                      "x_max": 10,
+                                      "y_min": 0,
+                                      "y_max": 10,
+                                      "x_tick": 1,
+                                      "y_tick": 1
+                                      },
+                             "font": {"size": 2,
+                                      "family": "宋体",
+                                      "color": None}
+                             }
+
+        self.settingsDict["point"] = {"color": "#182C61",
+                          "style": ".",
+                          "size": 4
+                          }
+
+
+        self.settingsDict["bezier"] = {
+                           "color": "#55E6C1",
+                           "style": "-",
+                           "width": 1,
+                           }
+        self.settingsDict["line"] = {"color": "#82589F",
+                         "style": "-",
+                         "width": "1"
+                         }
         self.legend = None
         self.dataLength = 0
         self.figure = plt.figure(frameon=True, num="10")
@@ -124,44 +140,97 @@ class DrawLines(QObject):
         self.ax1 = self.figure.add_axes([left, bottom, width, height])
         # self.ax1.set_axis_off()
 
-        ax = self.plotArgsDict["axes1"]
-        self.ax1.set_xticks(ax["tick"][0])
-        self.ax1.set_xlim(ax["lim"][0])
-        self.ax1.set_yticks(ax["tick"][1])
-        self.ax1.set_ylim(ax["lim"][1])
-        self.ax1.set_title('area1')
+        self.updateCanvas(self.x, self.y)
+        # ax = self.plotArgsDict["axes1"]
 
-        # 数据点连成的线
-        self.linePart =  self.ax1.plot(self.x, self.y, ls='-', color='g', label="Curve 1")
-        self.scatterPart = self.ax1.scatter(self.x, self.y, marker='.', s=60, color=self.color_list)
-        # print(self.scatterPart)
-        # 目标的插值曲线
-        self.bezierCurve = self.ax1.plot(self.bezier_x, self.bezier_y, "c-", label="Curve 2")
+        # self.ax1.set_xticks(ax["tick"][0])
+        # self.ax1.set_xlim(ax["lim"][0])
+        # self.ax1.set_yticks(ax["tick"][1])
+        # self.ax1.set_ylim(ax["lim"][1])
+        # self.ax1.set_title('area1')
+        #
+        # # axes = self.settingsDict["axes"]
+        # # self.ax1.set_xticks(axes["x_tick"])
+        # # self.ax1.set_xlim(xmin=axes["x_min"], xmax=axes["x_max"])
+        # # self.ax1.set_yticks(axes["y_tick"])
+        # # self.ax1.set_ylim(ymin=axes["y_min"], ymax=axes["y_max"])
+        # # self.ax1.set_title(axes["title"])
+        # print(self.settingsDict["line"])
+        # ls = self.settingsDict["line"]["style"]
+        # line_color = self.settingsDict["line"]["color"]
+        # line_width = self.settingsDict["line"]["width"]
+        #
+        # bs = self.settingsDict["bezier"]["style"]
+        # bezier_color = self.settingsDict["bezier"]["color"]
+        # bezier_width = self.settingsDict["bezier"]["width"]
+        #
+        # # self.color_list = [self.settingsDict["point"]["color"]] * len(self.x)
+        #
+        # # 数据点连成的线
+        # self.linePart =  self.ax1.plot(self.x, self.y, ls='-', color='g')
+        # self.scatterPart = self.ax1.scatter(self.x, self.y, marker='.', s=60, color=self.color_list)
+        # # print(self.scatterPart)
+        # # 目标的插值曲线
+        # self.bezierCurve = self.ax1.plot(self.bezier_x, self.bezier_y, "c-", label="Curve 2")
+        #
+        # # print("------------------除算法外共花费时间--------------------")
+        # # print(time.time() - start)
+        # # self.legend = self.ax1.legend(loc=self.plotArgsDict["axes1"]["legend"]["loc"])
+        # self.canvas.draw()
 
-        # print("------------------除算法外共花费时间--------------------")
-        # print(time.time() - start)
-        self.legend = self.ax1.legend(loc=self.plotArgsDict["axes1"]["legend"]["loc"])
-        self.canvas.draw()
+
+
 
     def updateCanvas(self, x, y):
+        # print(self.settingsDict)
         self.x, self.y = x, y
         # self.setPlotArgs()
-        ax = self.plotArgsDict["axes1"]
-        self.ax1.set_xticks(ax["tick"][0])
-        self.ax1.set_xlim(ax["lim"][0])
-        self.ax1.set_yticks(ax["tick"][1])
-        self.ax1.set_ylim(ax["lim"][1])
-
+        if self.settingsDict["axes"]["autoScale"]:
+            ax = self.plotArgsDict["axes1"]
+            self.ax1.set_xticks(ax["tick"][0])
+            self.ax1.set_xlim(ax["lim"][0])
+            self.ax1.set_yticks(ax["tick"][1])
+            self.ax1.set_ylim(ax["lim"][1])
+        else:
+            print(self.settingsDict["axes"])
+            ax = self.settingsDict["axes"]
+            x_tick = np.arange(float(ax["x_min"]), float(ax["x_max"])+float(ax["x_tick"]) ,float(ax["x_tick"]))
+            print(x_tick)
+            self.ax1.set_xticks(x_tick)
+            self.ax1.set_xlim(xmin=float(ax["x_min"]), xmax=float(ax["x_max"]))
+            y_tick = np.arange(float(ax["y_min"]), float(ax["y_max"]) + float(ax["y_tick"]), float(ax["y_tick"]))
+            self.ax1.set_yticks(y_tick)
+            self.ax1.set_ylim(ymin=float(ax["y_min"]), ymax=float(ax["y_max"]))
+            print(y_tick)
+            print('------')
+        print("yes", "==========")
         self.updateLinePart(self.x, self.y)
         self.updateBezierCurve(self.x, self.y)
         selectedFlagList = [False] * len(self.x)
         self.updateScatter(selectedFlagList)
         self.canvas.draw()
 
+    # def linePlot(self, ax, plotFunc, x, y):
+    #
+    #     bezier_ls = self.settingsDict[""]
+    #     bezier_lw = '-'
+    #     c = 'b'
+    #     point_c = 'r'
+    #     ms = 2
+    #     # x
+
+
+
+
+
+
+
+
     def updateLegend(self):
-        if self.legend:
-            self.legend.remove()
-        self.ax1.legend(loc=self.plotArgsDict["axes1"]["legend"]["loc"])
+        pass
+    #     if self.legend:
+    #         self.legend.remove()
+        # self.ax1.legend(loc=self.plotArgsDict["axes1"]["legend"]["loc"])
 
     def updateLinePart(self, x, y):
         self.x, self.y = x, y
@@ -169,8 +238,11 @@ class DrawLines(QObject):
             for i, line in enumerate(self.linePart):
                 self.linePart.pop(i)
                 line.remove()
-        self.linePart = self.ax1.plot(self.x, self.y, ls='-', color='g', label="Curve 1")
-
+        print(len(self.settingsDict["line"]["style"]))
+        self.linePart = self.ax1.plot(self.x, self.y,
+                                      linestyle=self.settingsDict["line"]["style"],
+                                      color=self.settingsDict["line"]["color"],
+                                      linewidth=self.settingsDict["line"]["width"])
 
     def updateBezierCurve(self, x, y):
         self.bezier_x, self.bezier_y = self.bezierFunc(x, y)
@@ -178,12 +250,15 @@ class DrawLines(QObject):
             for i, line in enumerate(self.bezierCurve):
                 self.bezierCurve.pop(i)
                 line.remove()
-        self.bezierCurve = self.ax1.plot(self.bezier_x, self.bezier_y, "c-", label="Curve 2")
+        self.bezierCurve = self.ax1.plot(self.bezier_x, self.bezier_y,
+                                         linestyle=self.settingsDict["bezier"]["style"],
+                                         color=self.settingsDict["bezier"]["color"],
+                                         linewidth=self.settingsDict["bezier"]["width"])
 
 
     def updateScatter(self, selectedFlagList=[]):
         self.dataLength = len(selectedFlagList)
-        self.color_list = ['r'] * self.dataLength
+        self.color_list = [self.settingsDict["point"]["color"]] * self.dataLength
         # print("----------color_list-----------", self.color_list)
         for i in range(self.dataLength):
             if selectedFlagList[i]:
@@ -191,7 +266,10 @@ class DrawLines(QObject):
         try:
             if self.scatterPart:
                 self.scatterPart.remove()
-            self.scatterPart = self.ax1.scatter(self.x, self.y, marker='.', s=60, color=self.color_list)
+            self.scatterPart = self.ax1.scatter(self.x, self.y,
+                                                marker=self.settingsDict["point"]["style"],
+                                                s=self.settingsDict["point"]["size"]*10,
+                                                color=self.color_list)
             # del self.scatterPart
         except Exception as ex:
             print(ex)

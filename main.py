@@ -12,6 +12,8 @@ from drawCurves.DrawCurves import *
 from Data.processExcel import *
 from PyQt5.QtCore import Qt, QPoint
 from PyQt5.QtCore import pyqtSignal, QObject
+from PyQt5.QtCore import QRegExp
+from PyQt5.QtGui import  QRegExpValidator
 import math
 import time
 import src
@@ -27,37 +29,251 @@ class SetMyDialog(QObject):
 
     changeSettingSignal = pyqtSignal(dict)
 
-    def __init__(self):
+    def __init__(self, settingsDict):
         super(QObject, self).__init__()
 
         self.dialog = QDialog()
+        self.settingsDict = settingsDict
+        # self.settingsDict = {
+        #
+        #                     "point": {},
+        #                      "line": {},
+        #                      "axes": {
+        #                               "autoScale": True,
+        #                               "title": "",
+        #                               "x_min": 0,
+        #                               "x_max": 10,
+        #                               "y_min": 0,
+        #                               "y_max": 10,
+        #                               "x_tick": 1,
+        #                               "y_tick": 1
+        #                      },
+        #                      "font": {"size": 2,
+        #                               "family": "宋体",
+        #                               "color": "#000000"},
+        #                      "bezier": {}
+        #                      }
+        # self.settingsDict["point"] = {
+        #                   "color": "#182C61",
+        #                    "style": ".",
+        #                    "size": 1,
+        #                  }
+        # self.settingsDict["bezier"] = {
+        #                   "color": "#6D214F",
+        #                   "style": "-",
+        #                   "width": 1,
+        #                   }
+        #
+        # self.settingsDict["line"] = {
+        #                   "color": "#82589F",
+        #                   "style": "-",
+        #                   "width": 1,
+        #                 }
+        self.lineDict = {
+            "-": "------",
+            "------": "-",
+            "-.-.-.": "-.",
+            "-.": "-.-.-.",
+            "......": "--",
+            "--": "......"
+                }
         self.setupUi()
-        self.settingsDict = {"point": {},
-                             "line": {},
-                             "axes": {}}
 
-        self.pointDict = self.settingsDict["point"]
-        self.pointDict = { "color": (255, 0, 0, 255)
-
-                         }
-
-        self.lineDict = { "color": (0, 255, 0, 255)
-
-                        }
 
     def setupUi(self):
         self.ui = Ui_Dialog()
         self.ui.setupUi(self.dialog)
         self.dialog.setWindowModality(Qt.ApplicationModal)
 
+        validator = QDoubleValidator(self.dialog)
+        validator.setDecimals(3)
+        self.ui.lineEdit_2.setValidator(validator)
+        self.ui.lineEdit_3.setValidator(validator)
+        self.ui.lineEdit_4.setValidator(validator)
+        self.ui.lineEdit_5.setValidator(validator)
+        self.ui.yLineEdit.setValidator(validator)
+        self.ui.yLineEdit_2.setValidator(validator)
+
+        self.updateValue()
+
         self.ui.set_lineColor_btn.clicked.connect(lambda: self.selectColor(self.ui.set_lineColor_btn, "line"))
         self.ui.set_pointColor_btn.clicked.connect(lambda: self.selectColor(self.ui.set_pointColor_btn, "point"))
-        # self.ui.pushButton_7.clicked.connect(lambda: self.selectColor(self.ui.pushButton_7, "font"))
+        self.ui.pushButton_7.clicked.connect(lambda: self.selectColor(self.ui.pushButton_7, "font"))
         self.ui.pushButton.clicked.connect(lambda: self.changeSettings())
         self.ui.pushButton_2.clicked.connect(lambda: self.dialog.close())
+        self.ui.CheckBox.stateChanged.connect(self.editAxesRange)
+        self.showAxesLineEdit(False)
+
+        self.ui.lineEdit_2.textChanged.connect(lambda: self.setAxesRange(text="x_min"))
+        self.ui.lineEdit_3.textChanged.connect(lambda: self.setAxesRange(text="x_max"))
+        self.ui.lineEdit_4.textChanged.connect(lambda: self.setAxesRange(text="y_min"))
+        self.ui.lineEdit_5.textChanged.connect(lambda: self.setAxesRange(text="y_max"))
+
+        self.updateSliderRange()
+        self.ui.horizontalSlider.valueChanged.connect(self.updateXTick)
+        self.ui.horizontalSlider_2.valueChanged.connect(self.updateYTick)
+        self.ui.yLineEdit.textChanged.connect(self.updateXSliderValue)
+        self.ui.yLineEdit_2.textChanged.connect(self.updateYSliderValue)
+        self.ui.comboBox_2.currentIndexChanged.connect(self.setLines)
+
+    def setLines(self, index):
+        print(index)
+        prior_curve = "line" if index == 1 else "bezier"
+        current_curve = "line" if index == 0 else "bezier"
+        self.settingsDict[prior_curve]["width"] = self.ui.spinBox_3.value()
+        self.settingsDict[prior_curve]["style"] = self.lineDict[self.ui.comboBox.currentText()]
+
+        self.ui.set_lineColor_btn.\
+                setStyleSheet('''QPushButton {{ 
+                                background-color: {0}; 
+                                }}'''.format(self.settingsDict[current_curve]["color"]))
+
+        self.ui.spinBox_3.setValue(self.settingsDict[current_curve]["width"])
+        self.ui.comboBox.setCurrentText(self.lineDict[self.settingsDict[current_curve]["style"]])
+
+    def updateValue(self):
+        curve = self.settingsDict["line"] if self.ui.comboBox_2.currentIndex() == 0 else self.settingsDict["bezier"]
+        self.ui.spinBox_3.setValue(int(curve["width"]))
+
+        self.ui.set_lineColor_btn.\
+            setStyleSheet('''QPushButton {{ 
+                                background-color: {0}; 
+                                }}'''.format(curve["color"]))
+
+        self.ui.comboBox.setCurrentText(str(self.lineDict[curve["style"]]))
+
+        self.ui.spinBox_4.setValue(int(self.settingsDict["point"]["size"]))
+        self.ui.set_pointColor_btn.\
+            setStyleSheet('''QPushButton {{ 
+                                background-color: {0}; 
+                                }}'''.format(self.settingsDict["point"]["color"]))
+        self.ui.comboBox_3.setCurrentText(str(self.settingsDict["point"]["style"]))
+
+        self.ui.lineEdit.setText(self.settingsDict["axes"]["title"])
+        self.ui.spinBox_5.setValue(int(self.settingsDict["font"]["size"]))
+
+        self.ui.pushButton_7.setStyleSheet('''QPushButton {{ 
+                                background-color: {0}; 
+                                }}'''.format(self.settingsDict["font"]["color"]))
+
+        state = Qt.Checked if self.settingsDict["axes"]["autoScale"] else Qt.Unchecked
+        self.ui.CheckBox.setCheckState(state)
+        ax = self.settingsDict["axes"]
+        self.ui.lineEdit_2.setText(str(ax["x_min"]))
+        self.ui.lineEdit_3.setText(str(ax["x_max"]))
+        self.ui.lineEdit_4.setText(str(ax["y_min"]))
+        self.ui.lineEdit_5.setText(str(ax["y_max"]))
+        self.ui.yLineEdit.setText(str(ax["x_tick"]))
+        self.ui.yLineEdit_2.setText(str(ax["y_tick"]))
+        if self.settingsDict["axes"]["autoScale"]:
+            self.ui.CheckBox.setCheckState(Qt.Checked)
+        else:
+            self.ui.CheckBox.setCheckState(Qt.Unchecked)
+            self.editAxesRange(True)
+
+    def updateAxesSetting(self):
+        x_min = self.settingsDict["axes"].get("x_min", 0)
+        x_max = self.settingsDict["axes"].get("x_max", 10)
+        y_min = self.settingsDict["axes"].get("y_min", 0)
+        y_max = self.settingsDict["axes"].get("y_max", 10)
+
+        self.ui.horizontalSlider.setMinimum(int(x_min * 1000))
+        self.ui.horizontalSlider.setMaximum(int(x_max * 1000))
+        x_tick = (int(x_max * 1000) - int(x_min * 1000)) // 100
+        self.ui.horizontalSlider.setSingleStep(x_tick)
+        self.ui.horizontalSlider_2.setMinimum(int(y_min * 1000))
+        self.ui.horizontalSlider_2.setMaximum(int(y_max * 1000))
+        y_tick = (int(y_max * 1000) - int(y_min * 1000)) // 100
+        self.ui.horizontalSlider_2.setSingleStep(y_tick)
+
+        self.ui.lineEdit_2.setText(str(x_min))
+        self.ui.lineEdit_3.setText(str(x_max))
+        self.ui.lineEdit_4.setText(str(y_min))
+        self.ui.lineEdit_5.setText(str(y_max))
+
+        self.ui.yLineEdit.setText(str(x_tick))
+        self.ui.yLineEdit_2.setText(str(y_tick))
+
+        self.settingsDict["axes"]["x_min"] = x_min
+        self.settingsDict["axes"]["x_max"] = x_max
+        self.settingsDict["axes"]["y_min"] = y_min
+        self.settingsDict["axes"]["y_max"] = y_max
+        self.settingsDict["axes"]["x_tick"] = self.ui.yLineEdit.text()
+        self.settingsDict["axes"]["y_tick"] = self.ui.yLineEdit_2.text()
+
+    def updateXTick(self, value):
+        self.ui.yLineEdit.setText(str(value/1000))
+
+    def updateYTick(self, value):
+        self.ui.yLineEdit_2.setText(str(value/1000))
+
+    def updateXSliderValue(self, text):
+        self.ui.horizontalSlider.setValue(int(float(text)*1000))
+
+    def updateYSliderValue(self, text):
+        self.ui.horizontalSlider_2.setValue(int(float(text)*1000))
+
+    def setAxesRange(self, text=""):
+        self.settingsDict["axes"][text] = float(self.sender().text())
+        self.updateSliderRange()
+
+    def updateSliderRange(self):
+        x_min = self.settingsDict["axes"].get("x_min", 0)
+        x_max = self.settingsDict["axes"].get("x_max", 10)
+        y_min = self.settingsDict["axes"].get("y_min", 0)
+        y_max = self.settingsDict["axes"].get("y_max", 10)
+        self.ui.horizontalSlider.setMinimum(int(x_min*1000))
+        self.ui.horizontalSlider.setMaximum(int(x_max*1000))
+        x_tick = (int(x_max*1000) - int(x_min*1000)) // 100
+        self.ui.horizontalSlider.setSingleStep(x_tick)
+        self.ui.horizontalSlider_2.setMinimum(int(y_min*1000))
+        self.ui.horizontalSlider_2.setMaximum(int(y_max*1000))
+        y_tick = (int(y_max*1000) - int(y_min*1000)) // 100
+        self.ui.horizontalSlider_2.setSingleStep(y_tick)
+
+        self.settingsDict["axes"]["x_min"] = x_min
+        self.settingsDict["axes"]["x_max"] = x_max
+        self.settingsDict["axes"]["y_min"] = y_min
+        self.settingsDict["axes"]["y_max"] = y_max
+        self.settingsDict["axes"]["x_tick"] = self.ui.yLineEdit.text()
+        self.settingsDict["axes"]["y_tick"] = self.ui.yLineEdit_2.text()
+
+    def showAxesLineEdit(self, flag):
+        self.settingsDict["axes"]["autoScale"] = flag
+        self.ui.lineEdit_2.setVisible(flag)
+        self.ui.lineEdit_3.setVisible(flag)
+        self.ui.lineEdit_4.setVisible(flag)
+        self.ui.lineEdit_5.setVisible(flag)
+        self.ui.yLineEdit.setVisible(flag)
+        self.ui.yLineEdit_2.setVisible(flag)
+        self.ui.Label_2.setVisible(flag)
+        self.ui.label_2.setVisible(flag)
+        self.ui.label_3.setVisible(flag)
+        self.ui.horizontalSlider.setVisible(flag)
+        self.ui.horizontalSlider_2.setVisible(flag)
+        self.ui.label.setVisible(flag)
+        self.ui.label_13.setVisible(flag)
+        self.ui.yLabel.setVisible(flag)
+
+    def editAxesRange(self, state):
+        flag = True if state == 2 else False
+
+        self.showAxesLineEdit(not flag)
 
     def changeSettings(self):
+
+        self.settingsDict["point"]["size"] = self.ui.spinBox_4.value()
+        self.settingsDict["point"]["style"] = self.ui.comboBox_3.currentText()
+        self.settingsDict["axes"]["title"] = self.ui.lineEdit.text()
+        self.settingsDict["font"]["size"] = self.ui.spinBox_5.value()
+        self.settingsDict["axes"]["x_tick"] = self.ui.yLineEdit.text()
+        self.settingsDict["axes"]["y_tick"] = self.ui.yLineEdit_2.text()
+        current_curve = "line" if self.ui.comboBox_2.currentIndex() == 0 else "bezier"
+        self.settingsDict[current_curve]["width"] = self.ui.spinBox_3.value()
+        self.settingsDict[current_curve]["style"] = self.lineDict[self.ui.comboBox.currentText()]
+        self.settingsDict["axes"]["autoScale"] = True if self.ui.CheckBox.isChecked() else False
         self.changeSettingSignal.emit(self.settingsDict)
+        # print(self.settingsDict)
         self.dialog.close()
 
     def getSettings(self):
@@ -66,12 +282,20 @@ class SetMyDialog(QObject):
 
     def selectColor(self, btn, name):
         color = QColorDialog.getColor(Qt.blue, self.dialog, "选择"+name+ "颜色")
-        rgba_color = color.getRgb()
-        # r, g, b, a = color.getRgb()
         if color.isValid():
             # 双重大括号表示转义
-            btn.setStyleSheet('''QPushButton {{ background-color: rgba({0}, {1}, {2}, {3}); }}'''.format(*rgba_color))
-            self.settingsDict[name]["color"] = rgba_color
+            self.sender().\
+                setStyleSheet('''QPushButton {{ 
+                                background-color: {0}; 
+                                }}'''.format(color.name()))
+            if name == "line":
+                if self.ui.comboBox.currentIndex == 0:
+                    self.settingsDict["bezier"]["color"] = color.name()
+                else:
+                    self.settingsDict["line"]["color"] = color.name()
+            else:
+                self.settingsDict[name]["color"] = color.name()
+
 
 
 
@@ -406,23 +630,23 @@ class CanvasContainer(QWidget):
                 else:
                     self.selectState = -1
                     self.setPlotArgs()
-
-                    if self.keyPressFlag and self.dragLegendFlag:
-                        # print("-----------drag legend--------")
-                        self.getLegendPos(False, (x_data, y_data))
-                        self.setCursor(Qt.SizeAllCursor)
-                        self.draw_lines.updateLegend()
-                        self.canvas.draw()
-
-                    # 如果放在legend上
-                    elif self.enterLegend((x_data, y_data)):
-                        # print("-----------drag legend2--------")
-                        self.selectState = 2
-                        if self.keyPressFlag:
-                            self.dragLegendFlag = True
+                    #
+                    # if self.keyPressFlag and self.dragLegendFlag:
+                    #     # print("-----------drag legend--------")
+                    #     self.getLegendPos(False, (x_data, y_data))
+                    #     self.setCursor(Qt.SizeAllCursor)
+                    #     self.draw_lines.updateLegend()
+                    #     self.canvas.draw()
+                    #
+                    # # 如果放在legend上
+                    # elif self.enterLegend((x_data, y_data)):
+                    #     # print("-----------drag legend2--------")
+                    #     self.selectState = 2
+                    #     if self.keyPressFlag:
+                    #         self.dragLegendFlag = True
 
                     # 看是否放在上面
-                    elif len(self.data[0]) == 1:
+                    if len(self.data[0]) == 1:
                         if self.data[0][0] == 0 and self.data[1][0] == 0:
                             if self.getPointDistance((x_data, y_data), (0, 0)) < 0.05:
                                 self.selectState = 0
@@ -499,6 +723,11 @@ class CanvasContainer(QWidget):
             self.draw_lines.scatterPart = None
         else:
             self.updatePointColor()
+        self.canvas.draw()
+
+    def showAxes(self, flag):
+        self.draw_lines.ax1.get_xaxis().set_visible(flag)
+        self.draw_lines.ax1.get_yaxis().set_visible(flag)
         self.canvas.draw()
 
     def updatePointColor(self):
@@ -707,10 +936,15 @@ class Ui_MyWindow(Ui_MainWindow):
         self.addPage(True)
 
     def showSettings(self):
-        print("===========")
-        self.setMyDialog = SetMyDialog()
+        self.setMyDialog = SetMyDialog(self.currentCanvasWidget.draw_lines.settingsDict)
+        self.setMyDialog.changeSettingSignal.connect(self.updateSettings)
         self.settingsDialog =  self.setMyDialog.dialog
         self.settingsDialog.show()
+
+    def updateSettings(self, dict):
+        # print(dict)
+        self.currentCanvasWidget.draw_lines.settingsDict = dict
+        self.currentCanvasWidget.draw_lines.updateCanvas(*self.data)
 
     def setCanvasWidget(self, isDataImport):
         # 鼠标所在位置的数据点
@@ -745,9 +979,10 @@ class Ui_MyWindow(Ui_MainWindow):
         self.process_data.setFig(self.currentCanvasWidget.getFigure())
         self.currentCanvasWidget.showCanvas(self.data)
 
-    def showAxes(self):
-        pass
-
+    def showAxes(self, state):
+        flag = True if state == 2 else False
+        print("yes")
+        self.currentCanvasWidget.showAxes(flag)
 
     def isShowInput(self, flag):
         if flag:
