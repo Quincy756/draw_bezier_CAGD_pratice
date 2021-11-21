@@ -297,8 +297,6 @@ class SetMyDialog(QObject):
                 self.settingsDict[name]["color"] = color.name()
 
 
-
-
 class MyTab():
     def __init__(self):
         # self.data = [[1, 2, 6, 20, 30], [2, 20, 32, 35, 40]]
@@ -339,18 +337,6 @@ class MyTab():
 
     def getCanvasWidget(self):
         return self.canvasWidget
-
-
-# 操作canvas的类
-class HMyCanvas():
-    def __init__(self, canvas=None):
-        self.canvas = canvas
-
-    def setCanvas(self, canvas):
-        self.canvas = canvas
-
-    def showCanvas(self):
-        pass
 
 
 class MyMenu(QMenu):
@@ -875,11 +861,12 @@ class Ui_MyWindow(Ui_MainWindow):
 
         self.show_axes_chk = QCheckBox("显示坐标轴")
         self.show_axes_chk.setCheckState(Qt.Checked)
+        self.show_point_chk.setCheckState(Qt.Checked)
+        self.show_axes_chk.setCheckState(Qt.Checked)
 
         self.figureSettingLayout = QHBoxLayout()
         self.figureSettingLayout.addWidget(self.show_point_chk)
         self.figureSettingLayout.addWidget(self.show_axes_chk)
-
 
         self.verticalLayout_3.addWidget(self.main_tabWidget)
         self.verticalLayout_3.addLayout(self.figureSettingLayout)
@@ -920,9 +907,6 @@ class Ui_MyWindow(Ui_MainWindow):
         self.action.triggered.connect(lambda: self.process_data.saveData())
         self.action_2.triggered.connect(lambda: self.process_data.exportData())
         self.process_data.getUpdateFunc([self.exportDataToTable, self.getTableData])
-
-        self.show_point_chk.setCheckState(Qt.Checked)
-        self.show_axes_chk.setCheckState(Qt.Checked)
 
         self.action_3.triggered.connect(self.showSettings)
 
@@ -1245,8 +1229,6 @@ class Ui_MyWindow(Ui_MainWindow):
             self.currentCanvasWidget = self.canvasWidgetList[index]
             self.setCanvasWidget(False)
         self.autoSwitchFlag = False
-
-
 
 
 # 运行程序

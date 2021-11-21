@@ -23,7 +23,6 @@ class MyFigureCanvas(FigureCanvas):
         self.drawFunc = None
 
     def save_selectPos(self, event):
-
         if self.drawFunc:
             self.drawFunc()
 
@@ -95,15 +94,6 @@ class DrawLines(QObject):
         self.t_array = np.arange(0, 1.001, 0.001)
         self.pos_num = len(self.t_array)
 
-    def setDrawStyles(self):
-        pass
-
-    def setFigure(self):
-        pass
-
-    def setCanvas(self):
-        pass
-
     def getCanvas(self):
         return self.canvas
 
@@ -139,46 +129,7 @@ class DrawLines(QObject):
         # 获得绘制的句柄
         self.ax1 = self.figure.add_axes([left, bottom, width, height])
         # self.ax1.set_axis_off()
-
         self.updateCanvas(self.x, self.y)
-        # ax = self.plotArgsDict["axes1"]
-
-        # self.ax1.set_xticks(ax["tick"][0])
-        # self.ax1.set_xlim(ax["lim"][0])
-        # self.ax1.set_yticks(ax["tick"][1])
-        # self.ax1.set_ylim(ax["lim"][1])
-        # self.ax1.set_title('area1')
-        #
-        # # axes = self.settingsDict["axes"]
-        # # self.ax1.set_xticks(axes["x_tick"])
-        # # self.ax1.set_xlim(xmin=axes["x_min"], xmax=axes["x_max"])
-        # # self.ax1.set_yticks(axes["y_tick"])
-        # # self.ax1.set_ylim(ymin=axes["y_min"], ymax=axes["y_max"])
-        # # self.ax1.set_title(axes["title"])
-        # print(self.settingsDict["line"])
-        # ls = self.settingsDict["line"]["style"]
-        # line_color = self.settingsDict["line"]["color"]
-        # line_width = self.settingsDict["line"]["width"]
-        #
-        # bs = self.settingsDict["bezier"]["style"]
-        # bezier_color = self.settingsDict["bezier"]["color"]
-        # bezier_width = self.settingsDict["bezier"]["width"]
-        #
-        # # self.color_list = [self.settingsDict["point"]["color"]] * len(self.x)
-        #
-        # # 数据点连成的线
-        # self.linePart =  self.ax1.plot(self.x, self.y, ls='-', color='g')
-        # self.scatterPart = self.ax1.scatter(self.x, self.y, marker='.', s=60, color=self.color_list)
-        # # print(self.scatterPart)
-        # # 目标的插值曲线
-        # self.bezierCurve = self.ax1.plot(self.bezier_x, self.bezier_y, "c-", label="Curve 2")
-        #
-        # # print("------------------除算法外共花费时间--------------------")
-        # # print(time.time() - start)
-        # # self.legend = self.ax1.legend(loc=self.plotArgsDict["axes1"]["legend"]["loc"])
-        # self.canvas.draw()
-
-
 
 
     def updateCanvas(self, x, y):
@@ -209,28 +160,6 @@ class DrawLines(QObject):
         selectedFlagList = [False] * len(self.x)
         self.updateScatter(selectedFlagList)
         self.canvas.draw()
-
-    # def linePlot(self, ax, plotFunc, x, y):
-    #
-    #     bezier_ls = self.settingsDict[""]
-    #     bezier_lw = '-'
-    #     c = 'b'
-    #     point_c = 'r'
-    #     ms = 2
-    #     # x
-
-
-
-
-
-
-
-
-    def updateLegend(self):
-        pass
-    #     if self.legend:
-    #         self.legend.remove()
-        # self.ax1.legend(loc=self.plotArgsDict["axes1"]["legend"]["loc"])
 
     def updateLinePart(self, x, y):
         self.x, self.y = x, y
@@ -292,24 +221,24 @@ class DrawLines(QObject):
         # start = time.time()
 
 
-        '''# 普通公式算法
-        # b_xList = []
-        # b_yList = []
-        # 点的个数要比阶数大1
-        # point_num = len(self.x)
-        # 阶数
-        # n = point_num - 1
-        # for t in t_array:
-        #     x_temp = 0.0
-        #     y_temp = 0.0
-        #     for i in range(n+1):
-        #         # 计算系数
-        #         coefficient = comb(n, i)
-        #         x_temp += coefficient * self.x[i] * ((1.0-t)**(n-i)) * (t**i)
-        #         y_temp += coefficient * self.y[i] * ((1.0-t)**(n-i)) * (t**i)
-        #     b_xList.append(x_temp)
-        #     b_yList.append(y_temp)
-        # return b_xList, b_yList
+        ''' 普通公式算法
+        b_xList = []
+        b_yList = []
+        点的个数要比阶数大1
+        point_num = len(self.x)
+        阶数
+        n = point_num - 1
+        for t in t_array:
+            x_temp = 0.0
+            y_temp = 0.0
+            for i in range(n+1):
+                # 计算系数
+                coefficient = comb(n, i)
+                x_temp += coefficient * self.x[i] * ((1.0-t)**(n-i)) * (t**i)
+                y_temp += coefficient * self.y[i] * ((1.0-t)**(n-i)) * (t**i)
+            b_xList.append(x_temp)
+            b_yList.append(y_temp)
+        return b_xList, b_yList
         '''
 
         # print("---------------")
@@ -353,24 +282,6 @@ class DrawLines(QObject):
 
 
 
-# 定义插值算法类
-class InterpolAlgo:
-    def __init__(self, pointSet):
-        pass
-
-# 定义
-class BezierCurve(InterpolAlgo):
-
-    def __init__(self, pointSet=None):
-        super(InterpolAlgo, self).__init__(pointSet)
-        self.pointSet = pointSet
-        self.result = []
-
-    def get_result(self):
-        return self.result
-
-    def set_pointSet(self, pointSet):
-        self.pointSet += pointSet
 
 
 
