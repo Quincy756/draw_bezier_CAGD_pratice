@@ -115,9 +115,9 @@ Pipfile和Pipfile.lock是建立程序运行环境所需的环境。src.py和src.
 
 ### 绘图区域的相关功能
 
-> 用户能够新建多个标签页(tab)，并能够保存标签页、删除标签页、切换标签页，每个tab之间的绘图区域是可以自由切换互不影响的，如图6所所示。每个标签页中还能够选择是否显示点和是否显示坐标轴，关闭标签页时会提醒用户是否保存。
+用户能够新建多个标签页(tab)，并能够保存标签页、删除标签页、切换标签页，每个tab之间的绘图区域是可以自由切换互不影响的，如图6所所示。每个标签页中还能够选择是否显示点和是否显示坐标轴，关闭标签页时会提醒用户是否保存。
 
-![](media/image6.png){width="2.811913823272091in" height="1.984374453193351in"} ![](media/image7.png){width="2.84375in" height="2.0068405511811025in"}
+![image-20211124204028086](https://raw.githubusercontent.com/Quincy756/picutres/main/img/RVM/image-20211124204028086.png)![image-20211124204033902](https://raw.githubusercontent.com/Quincy756/picutres/main/img/RVM/image-20211124204033902.png)        
 
 图6 多个tab进行切换绘图
 
@@ -125,23 +125,23 @@ Pipfile和Pipfile.lock是建立程序运行环境所需的环境。src.py和src.
 
 设置界面有两种，如果勾选坐标轴自动调整那么如图7右所示。可以对x轴和y轴范围和刻度进行详细的设计。能够设置线的颜色、线宽、样式和点的大小、颜色、样式等。
 
-> ![](media/image8.png){width="2.272902449693788in" height="2.630207786526684in"} ![](media/image9.png){width="2.2774048556430446in" height="2.6354166666666665in"}
+![image-20211124204156919](https://raw.githubusercontent.com/Quincy756/picutres/main/img/RVM/image-20211124204156919.png)
 
 图7 设置界面
 
-
+![image-20211124204219962](https://raw.githubusercontent.com/Quincy756/picutres/main/img/RVM/image-20211124204219962.png)
 
 如图8 (a)(b)(c)展示了通过设置不同的点线样式绘制的图形效果。
 
-![](media/image10.png){width="3.256515748031496in" height="1.7777777777777777in"}
+![image-20211124204231568](https://raw.githubusercontent.com/Quincy756/picutres/main/img/RVM/image-20211124204231568.png)
 
 \(a\)
 
-![](media/image11.png){width="3.227136920384952in" height="1.9715277777777778in"}
+![image-20211124204237209](https://raw.githubusercontent.com/Quincy756/picutres/main/img/RVM/image-20211124204237209.png)
 
 \(b\)
 
-![](media/image12.png){width="3.2215277777777778in" height="1.9957556867891513in"}
+![image-20211124204243195](https://raw.githubusercontent.com/Quincy756/picutres/main/img/RVM/image-20211124204243195.png)
 
 \(c\)
 
@@ -151,7 +151,7 @@ Pipfile和Pipfile.lock是建立程序运行环境所需的环境。src.py和src.
 
 能够对不同标签页的曲线进行导出，可以导出为excel表格，或者png图片。能够将excel表格中固定格式的数据点导入到数据展示表格中，并自动绘制曲线。如图9所示。
 
-![](media/image13.png){width="2.9411767279090113in" height="2.2405511811023624in"}
+![image-20211124204256141](https://raw.githubusercontent.com/Quincy756/picutres/main/img/RVM/image-20211124204256141.png)
 
 图 9 导出后的曲线图片
 
@@ -181,7 +181,7 @@ Pipfile和Pipfile.lock是建立程序运行环境所需的环境。src.py和src.
 
 按模块划分可分为GUI模块，用户交互模块、数据处理模块和绘制模块，具体的uml类图及方法如图10所示。
 
-![](media/image14.png){width="4.188123359580053in" height="8.666666666666666in"}
+![CAGD copy](https://raw.githubusercontent.com/Quincy756/picutres/main/img/RVM/CAGD%20copy.png)
 
 图 10 软件的UML类图
 
@@ -229,7 +229,7 @@ Ui_MyWindow类的主要函数如下，除setupUi外可分为大致分为四类�
 
 -   closeCurrentTab(self): 关闭当前标签页并提醒用户是否保存。
 
-\(3\) 展示相关
+(3) 展示相关
 
 -   showAxes(self, state): 根据输入的state确定是否显示坐标轴。
 
@@ -241,7 +241,7 @@ Ui_MyWindow类的主要函数如下，除setupUi外可分为大致分为四类�
 
 -   showSettings(self): 负责实现菜单栏中的设置选项，并弹出设置对话框。
 
-(4\) 更新相关
+(4) 更新相关
 
 -   updateSettings(self, dict): 更新设置对话框中的各组件设置。
 
@@ -255,7 +255,7 @@ Ui_MyWindow类的主要函数如下，除setupUi外可分为大致分为四类�
 
 #### SetMyDialog类
 
-> SetMyDialog类的主要函数如下：
+SetMyDialog类的主要函数如下：
 
 -   setupUi(self, Window): 继承自Ui_Dialog，实现设置界面中各部分组件的初始化、状态设置、信号与槽函数的设置等。
 
