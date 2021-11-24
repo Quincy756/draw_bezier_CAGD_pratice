@@ -2,30 +2,7 @@
 
 ## 系统设计
 
-整个绘图软件基于n贝塞尔插值公式进行基础设计，n阶贝塞尔插值曲线公式可表示为
-
-$$B(t) = \sum_{i = 0}^{n}\mspace{2mu}\begin{pmatrix}
-\ n \\
-\ i \\
-\end{pmatrix}Pi(1 - t)^{n - i}t^{i}$$
-
-$$\ \ \ \ \  = \begin{pmatrix}
-\ n \\
-\ 0 \\
-\end{pmatrix}P0(1 - t)^{n}t^{0} + \begin{pmatrix}
-\ n \\
-\ 1 \\
-\end{pmatrix}P1(1 - t)^{n - 1}t^{1} + \ldots + \begin{pmatrix}
-n \\
-n - 1 \\
-\end{pmatrix}Pn - 1(1 - t)^{1}t^{n - 1}$$
-
-$$\ \ \ \ \ \ \ \ \ \ \ \ \  + \begin{pmatrix}
-\ n \\
-\ n \\
-\end{pmatrix}Pn(1 - t)^{0}t^{n},t \in \lbrack 0,1\rbrack$$
-
-在实现绘制n阶贝塞尔曲线的高效绘制算法的基础上加入了各种对曲线的操作操作，使之成为一个完整的曲线绘制软件。该项目主要使用python语言进行编写，**主要结合PyQt5、matplotlib、numpy和openxl等库**进行开发，整个项目的代码量在2500行左右。
+整个绘图软件基于n贝塞尔插值公式进行基础设计，在实现绘制n阶贝塞尔曲线的高效绘制算法的基础上加入了各种对曲线的操作操作，使之成为一个完整的曲线绘制软件。该项目主要使用python语言进行编写，**主要结合PyQt5、matplotlib、numpy和openxl等库**进行开发，整个项目的代码量在2500行左右。
 
 系统设计主要包括界面设计、功能设计、程序设计这三部分。整个项目在github上进行开源，开源地址为: <https://github.com/Quincy756/draw_bezier_CAGD_pratice>。同时整个系统可扩展，可以在源程序的基础上扩展开发其他曲线如拉格朗日、B样条曲线等的绘制程序。
 
